@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ project.name }} — {{ branding.display_name }} design dossier</title>
+<style>
+  :root { --primary: {{ branding.primary_color }}; --accent: {{ branding.accent_color }}; --bg: {{ branding.background_color }}; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: #222; font-family: {{ font_stack }}; line-height: 1.45; }
+  .page { max-width: 900px; margin: 0 auto; padding: 32px 24px 64px; }
+  header { display: flex; align-items: center; gap: 16px; border-bottom: 4px solid var(--primary); padding-bottom: 16px; }
+  header img { max-height: 64px; max-width: 200px; }
+  h1 { margin: 0; color: var(--primary); font-size: 28px; }
+  h2 { color: var(--primary); border-bottom: 1px solid #ddd; padding-bottom: 4px; margin-top: 32px; }
+  .meta { color: #555; font-size: 14px; }
+  .caveat { border: 2px solid var(--accent); background: #fff; padding: 12px 16px; margin: 20px 0; font-weight: 600; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; background: var(--accent); color: #fff; font-size: 12px; }
+  .plan svg { width: 100%; height: auto; background: #fff; border: 1px solid #ddd; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #e3e3e3; vertical-align: top; }
+  td.num, th.num { text-align: right; white-space: nowrap; }
+  .renders { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .renders figure { margin: 0; } .renders img { width: 100%; border: 1px solid #ccc; }
+  figcaption { font-size: 12px; color: #555; }
+  ul { padding-left: 20px; }
+  footer { margin-top: 40px; font-size: 12px; color: #666; border-top: 1px solid #ddd; padding-top: 12px; }
+  @media print { body { background: #fff; } .page { padding: 0; } h2 { break-after: avoid; } figure, tr { break-inside: avoid; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    {% if logo %}<img src="{{ logo }}" alt="{{ branding.display_name }} logo">{% endif %}
+    <div>
+      <h1>{{ project.name }}</h1>
+      <div class="meta">{{ branding.display_name }} · Design dossier · Plan version {{ version.version_no }}
+        {% if version.label %}({{ version.label }}){% endif %} · Generated {{ generated_at }}</div>
+    </div>
+  </header>
+
+  <div class="caveat">{{ caveat }}</div>
+  <p class="meta">Review status: <span class="badge">{{ version.review_status }}</span>
+    {% if version.review_status == 'provisional' %} — changes to walls, openings or wet rooms are awaiting designer review.{% endif %}
+    {% if version.reviewed_at %} Reviewed by the designer on {{ version.reviewed_at.strftime('%Y-%m-%d') }} (conceptual review only).{% endif %}
+    Prepared by {{ author.display_name or author.email }}.</p>
+  {% if note %}<p>{{ note }}</p>{% endif %}
+
+  <h2>Floor plan</h2>
+  <div class="plan">{{ plan_svg }}</div>
+  {% if version.review_flags %}
+  <h3>Items requiring professional review</h3>
+  <ul>{% for f in version.review_flags %}<li>{{ f.category }} — {{ f.element_id }}: {{ f.reason }} ({{ f.change }})</li>{% endfor %}</ul>
+  {% endif %}
+
+  <h2>Design brief</h2>
+  <table>
+    <tr><th>Styles</th><td>{{ brief.styles | join(', ') or '—' }}</td></tr>
+    <tr><th>Colours</th><td>{{ brief.colors | join(', ') or '—' }}</td></tr>
+    <tr><th>Materials</th><td>{{ brief.materials | join(', ') or '—' }}</td></tr>
+    <tr><th>Budget</th><td>{% if brief.budget.min is not none or brief.budget.max is not none %}{{ brief.budget.min or 0 }} – {{ brief.budget.max or '—' }} {{ brief.budget.currency }}{% else %}—{% endif %} ({{ brief.budget.priority }})</td></tr>
+    <tr><th>Functional needs</th><td>{{ brief.functional_needs | join('; ') or '—' }}</td></tr>
+    <tr><th>Household</th><td>{{ brief.household.adults }} adult(s), {{ brief.household.children }} child(ren){% if brief.household.pets %}, pets: {{ brief.household.pets | join(', ') }}{% endif %}{% if brief.household.works_from_home %}, works from home{% endif %}</td></tr>
+    <tr><th>Lifestyle</th><td>{{ brief.lifestyle | join('; ') or '—' }}</td></tr>
+    <tr><th>Constraints</th><td>{{ brief.constraints | join('; ') or '—' }}</td></tr>
+    <tr><th>Existing items</th><td>{% for i in brief.existing_items %}{{ i.name }}{% if not i.keep %} (replace){% endif %}{% if not loop.last %}, {% endif %}{% else %}—{% endfor %}</td></tr>
+    {% if brief.notes %}<tr><th>Notes</th><td>{{ brief.notes }}</td></tr>{% endif %}
+  </table>
+
+  {% if alternatives %}
+  <h2>Design concepts</h2>
+  <ul>{% for a in alternatives %}<li><strong>{{ a.name }}</strong>{% if a.style_key %} ({{ a.style_key }}){% endif %} — plan v{{ a.version_no }}{% if a.description %}: {{ a.description }}{% endif %}</li>{% endfor %}</ul>
+  {% endif %}
+
+  {% if renders %}
+  <h2>Conceptual visualizations</h2>
+  <div class="renders">
+    {% for r in renders %}{% if r.src %}<figure><img src="{{ r.src }}" alt="Conceptual render"><figcaption>Plan v{{ r.version_no }} · {{ r.view.angle }}{% if r.view.style %} · {{ r.view.style }}{% endif %} — conceptual, not photoreal</figcaption></figure>{% endif %}{% endfor %}
+  </div>
+  {% endif %}
+
+  <h2>Cost estimate <span class="badge">Estimate — non-binding</span></h2>
+  <p class="meta">{{ disclaimer }} Basis: {{ basis }}.</p>
+  <table>
+    <tr><th>Item</th><th class="num">Qty</th><th class="num">Range ({{ estimate.currency }})</th></tr>
+    {% for it in estimate['items'] if not it.excluded %}
+    <tr><td>{{ it.label }}</td><td class="num">{{ it.qty }} {{ it.unit }}</td><td class="num">{{ '%.0f' % it.total_low }} – {{ '%.0f' % it.total_high }}</td></tr>
+    {% endfor %}
+    <tr><th>Total (estimate)</th><th></th><th class="num">{{ '%.0f' % estimate.totals.low }} – {{ '%.0f' % estimate.totals.high }}</th></tr>
+  </table>
+
+  <footer>{{ caveat }} · {{ branding.studio_name }} · Snapshot of plan version {{ version.version_no }} created {{ version.created_at.strftime('%Y-%m-%d') }}.</footer>
+</div>
+</body>
+</html>

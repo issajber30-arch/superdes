@@ -1,0 +1,18 @@
+# Minimal Supabase CLI config. Auth (GoTrue) is not used: the FastAPI backend does auth itself and
+# connects as the restricted `app_user` role. Migrations in ./migrations are plain Postgres SQL.
+project_id = "superdes"
+
+[db]
+port = 54322
+major_version = 16
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+
+[storage]
+enabled = true
+
+[auth]
+enabled = false
