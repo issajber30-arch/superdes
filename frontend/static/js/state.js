@@ -27,7 +27,7 @@ export function clearGuest() { try { localStorage.removeItem(GUEST_KEY); } catch
 // --- branding: values are validated server-side; re-validated here before touching CSS ---
 const HEX = /^#[0-9a-fA-F]{6}$/;
 export const FONTS = {
-  inter: ['Inter', '"Inter", system-ui, -apple-system, "Segoe UI", sans-serif'],
+  inter: ['Inter', '"Inter", "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif'], // Inter if installed, else the bundled house sans
   lora: ['Lora', '"Lora", Georgia, "Times New Roman", serif'],
   playfair: ['Playfair Display', '"Playfair Display", Georgia, serif'],
   'source-sans': ['Source Sans', '"Source Sans 3", "Source Sans Pro", system-ui, sans-serif'],
