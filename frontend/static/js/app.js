@@ -1,6 +1,7 @@
 // App entry: hash router, top bar and session/branding bootstrap.
 import { api, apiUrl, ApiError, errorText, PREVIEW } from './api.js';
 import { h, badge } from './dom.js';
+import { icon } from './icons.js';
 import { session, loadMe, applyBranding, isOwner } from './state.js';
 import { landingPage } from './pages/landing.js';
 import { loginPage, startPage } from './pages/auth.js';
@@ -34,6 +35,16 @@ let navSeq = 0;
 let leaveGuard = null; // set by a page; returns false to cancel navigation away from it
 let lastHash = location.hash;
 export const setLeaveGuard = (fn) => { leaveGuard = fn; };
+let chrome = null; // { topbar, rail } nodes set by the project page; cleared on every navigation
+
+/** Project context in the top bar (breadcrumb + step group) and the left rail / bottom bar. */
+export function setProjectChrome(c) {
+  chrome = c;
+  const host = document.getElementById('rail-host');
+  host.replaceChildren(...(c && c.rail ? [c.rail] : []));
+  document.body.classList.toggle('has-rail', !!(c && c.rail));
+  renderTopbar();
+}
 
 export const go = (hash) => { if (location.hash === hash) route(); else location.hash = hash; };
 export const currentNav = () => navSeq;
@@ -58,14 +69,19 @@ export function renderTopbar() {
   if (me) {
     if (studio) links.push(h('a', { href: '#/dashboard' }, 'Projects'));
     if (isOwner()) links.push(h('a', { href: '#/branding' }, 'Branding'));
-    links.push(h('span', { class: 'topbar-user', title: me.user.email }, me.user.display_name || me.user.email));
+    links.push(h('span', { class: 'topbar-user', title: me.user.email },
+      h('span', { class: 'avatar' }, icon('person', 20)),
+      h('span', { class: 'who' }, h('b', null, me.user.display_name || me.user.email), h('span', null, me.role || 'member'))));
     links.push(h('button', { type: 'button', class: 'btn btn-small btn-ghost', onclick: logout }, 'Sign out'));
   } else {
     if (!PREVIEW) links.push(h('a', { href: '#/guest' }, 'Try it free'));
     links.push(h('a', { href: '#/login', class: 'btn btn-small' }, 'Sign in'));
   }
   bar.replaceChildren(
-    h('a', { href: me && studio ? '#/dashboard' : '#/', class: 'brand' }, logo, h('span', null, brandName)),
+    h('a', { href: me && studio ? '#/dashboard' : '#/', class: 'brand' },
+      logo || h('span', { class: 'brand-mark', 'aria-hidden': 'true' }, (brandName.trim()[0] || 'S').toUpperCase()),
+      h('span', { class: 'brand-name' }, brandName)),
+    chrome && chrome.topbar ? chrome.topbar : null,
     h('nav', { class: 'topnav', 'aria-label': 'Main' }, links));
 }
 
@@ -96,6 +112,7 @@ export async function route() {
   const { path, query } = parseHash();
   const match = routes.map(([re, page, opts]) => [path.match(re), page, opts || {}]).find(([m]) => m);
   main.replaceChildren();
+  if (chrome) setProjectChrome(null);
   window.scrollTo(0, 0);
   if (!match) {
     main.append(h('section', { class: 'page narrow' }, h('h1', null, 'Page not found'), h('p', null, h('a', { href: '#/' }, 'Go to the start page'))));
