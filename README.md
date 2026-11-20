@@ -13,7 +13,7 @@ Sketch a floor plan, explore styles with an AI consultant, request concept rende
 
 ![SuperDes demo: new project from the room wizard, place a sofa, save v2, ask the AI consultant, request a render, see the budget](docs/demo/superdes-demo.gif)
 
-<sub>New project from the room wizard → place a sofa and save version 2 → ask the AI consultant → request a Japandi concept render → non-binding budget. Recorded from the running app · <a href="docs/demo/superdes-demo.mp4">MP4</a></sub>
+<sub>New project from the room wizard → place a sofa, move it into the living room and save version 2 → ask the AI consultant → request a Japandi concept render → non-binding budget. Recorded from the running app · <a href="docs/demo/superdes-demo.mp4">MP4</a></sub>
 
 </div>
 
@@ -38,15 +38,15 @@ Sketch a floor plan, explore styles with an AI consultant, request concept rende
 
 ## Screens
 
-| Room plan editor | Concept renders |
+| Projects overview | Room plan editor |
 |---|---|
-| <img src="docs/screens/plan-editor.jpg" width="440" alt="2D plan editor with versions"> | <img src="docs/screens/renders.jpg" width="440" alt="Concept renders pinned to plan versions"> |
-| **AI consultant** | **Version compare** |
-| <img src="docs/screens/ai-consultant.jpg" width="440" alt="AI consultant suggestion cards"> | <img src="docs/screens/compare.jpg" width="440" alt="Side-by-side plan versions with the change highlighted"> |
-| **Design brief** | **Budget (non-binding)** |
-| <img src="docs/screens/brief.jpg" width="440" alt="Design brief form"> | <img src="docs/screens/budget.jpg" width="440" alt="Estimate with low/high ranges"> |
-| **Studio dashboard** | **Branded dossier** |
-| <img src="docs/screens/dashboard.jpg" width="440" alt="Studio dashboard with credits and client link"> | <img src="docs/screens/dossier.jpg" width="440" alt="Printable design dossier"> |
+| <img src="docs/screens/dashboard.jpg" width="440" alt="Projects overview with metric tiles, status filter and project cards"> | <img src="docs/screens/plan-editor.jpg" width="440" alt="2D plan editor with tool bar, selected sofa and tabbed side panel"> |
+| **Style, materials & AI visualizer** | **Review & markups** |
+| <img src="docs/screens/studio.jpg" width="440" alt="Three-column studio: material palette, concept renders side by side, AI consultant"> | <img src="docs/screens/review.jpg" width="440" alt="Plan redlines, specification audit, decision log and tasks"> |
+| **Dossier & budget feasibility** | **Procurement schedule (non-binding)** |
+| <img src="docs/screens/dossier.jpg" width="440" alt="Brief summary with concepts and the budget model against the client budget"> | <img src="docs/screens/budget.jpg" width="440" alt="Estimate grouped into finishes and furniture with low/high ranges"> |
+| **Design brief** | **White-label branding** |
+| <img src="docs/screens/brief.jpg" width="440" alt="Design brief in section cards"> | <img src="docs/screens/branding.jpg" width="440" alt="Branding settings with a live client preview"> |
 
 <img src="docs/screens/concept-render.png" width="520" alt="A concept render: Japandi living room drawn from plan version 2">
 

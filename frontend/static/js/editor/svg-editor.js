@@ -614,7 +614,7 @@ export class PlanEditor {
     if (this.opts.panel === false) return;
     const parts = [];
     const all = [];
-    for (const k of LAYERS) for (const e of this.g[k]) all.push([`${k}:${e.id}`, `${k.slice(0, -1)} · ${this.itemName(k, e)}`]);
+    for (const k of LAYERS) for (const e of this.g[k]) all.push([`${k}:${e.id}`, `${this.typeTitle(k, e)} · ${this.itemName(k, e)}`]);
     if (all.length) {
       const jump = select([['', 'Choose an element…'], ...all], this.sel ? `${this.sel.type}:${this.sel.id}` : '');
       jump.addEventListener('change', () => {
