@@ -6,17 +6,15 @@ import { go, setProjectChrome } from '../app.js';
 import { icon } from '../icons.js';
 import * as plan from './plan.js';
 import * as brief from './brief.js';
-import * as design from './design.js';
-import * as ai from './ai.js';
-import * as renders from './renders.js';
+import * as workbench from './workbench.js';
 import * as compare from './compare.js';
 import * as budget from './budget.js';
 import * as collab from './collab.js';
 import * as dossier from './dossier.js';
 
 // [route key, label, icon]; labels stay as before so links and tests keep working
-const TABS = [['plan', 'Plan', plan, 'architecture'], ['brief', 'Brief', brief, 'edit_note'], ['design', 'Design', design, 'palette'],
-  ['ai', 'AI consultant', ai, 'psychology'], ['renders', 'Renders', renders, 'photo_camera'], ['compare', 'Compare', compare, 'compare'],
+const TABS = [['plan', 'Plan', plan, 'architecture'], ['brief', 'Brief', brief, 'edit_note'], ['design', 'Design', workbench, 'palette'],
+  ['ai', 'AI consultant', workbench, 'psychology'], ['renders', 'Renders', workbench, 'photo_camera'], ['compare', 'Compare', compare, 'compare'],
   ['budget', 'Budget', budget, 'receipt_long'], ['collab', 'Collaboration', collab, 'forum'], ['dossier', 'Dossier', dossier, 'description']];
 // Stitch step group: each step opens its first section and is current for all of its sections
 const STEPS = [['1. Floor plan', ['plan']], ['2. Style & materials', ['brief', 'design']], ['3. AI visualizer', ['ai', 'renders', 'compare']], ['4. Dossier & budget', ['budget', 'dossier']]];
@@ -26,7 +24,7 @@ export async function projectPage(main, [pid, tab = 'plan'], query) {
   if (!entry) { go(`#/p/${pid}/plan`); return null; }
   const project = await api(`/projects/${pid}`);
   const staff = ['owner', 'designer'].includes(project.my_role);
-  const ctx = { pid, project, staff, query, base: `/projects/${pid}` };
+  const ctx = { pid, project, staff, query, tab, base: `/projects/${pid}` };
 
   const title = h('h1', null, project.name);
   const crumbName = h('span', { class: 'crumb-name', title: project.name }, project.name);
