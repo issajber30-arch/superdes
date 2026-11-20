@@ -81,7 +81,7 @@ export function renderTopbar() {
     h('a', { href: me && studio ? '#/dashboard' : '#/', class: 'brand' },
       logo || h('span', { class: 'brand-mark', 'aria-hidden': 'true' }, (brandName.trim()[0] || 'S').toUpperCase()),
       h('span', { class: 'brand-name' }, brandName)),
-    chrome && chrome.topbar ? chrome.topbar : null,
+    chrome && chrome.topbar ? chrome.topbar : '', // replaceChildren(null) would render "null"
     h('nav', { class: 'topnav', 'aria-label': 'Main' }, links));
 }
 

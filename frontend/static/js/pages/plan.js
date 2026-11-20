@@ -17,24 +17,34 @@ export function reviewBadge(v) {
 }
 
 export async function render(el, ctx) {
-  const { base, pid, staff, query } = ctx;
+  const { base, pid, staff, query, project } = ctx;
   const viewNo = query.v ? Number(query.v) : null;
   const [planRes, catalog] = await Promise.all([api(`${base}/plan`), loadCatalog()]);
   let current = planRes.current_version;
   const shown = viewNo && viewNo !== current.version_no ? await api(`${base}/plan/versions/${viewNo}`) : current;
   const readOnly = shown.version_no !== current.version_no;
+  let saved = ''; // JSON of the last saved geometry: undoing back to it is not an unsaved change
+  let savedNote = '';
   let dirty = false;
   const err = notice();
   const info = h('div', { class: 'version-info' });
   const versionsBox = h('div', { class: 'versions' });
   const host = h('div');
-  const wizBox = h('div', { class: 'card', hidden: true });
-
-  const editor = new PlanEditor(host, {
-    geometry: shown.geometry, readOnly, catalog,
-    onChange: () => { dirty = true; saveState.textContent = 'Unsaved changes'; },
-  });
   const saveState = h('span', { class: 'muted small', 'aria-live': 'polite' }, '');
+
+  const wizard = (ed) => h('div', null,
+    h('h3', null, 'Generate rooms'),
+    isEmpty(ed.getGeometry()) ? null : h('p', { class: 'notice notice-info' }, 'This replaces the current drawing in the editor (you can undo, and nothing is saved until you save a version).'),
+    wizardForm((g) => { ed.setGeometry(g, true); ed.fit(); ed.render(); ed.showTab('stats'); }, { submitLabel: 'Load into editor' }));
+  const editor = new PlanEditor(host, {
+    geometry: shown.geometry, readOnly, catalog, title: project.name, sheet: `Plan v${shown.version_no}`,
+    wizard: readOnly ? null : wizard, versions: versionsBox, initialTab: !readOnly && isEmpty(shown.geometry) ? 'wizard' : null,
+    onChange: (g) => {
+      dirty = JSON.stringify(g) !== saved;
+      saveState.textContent = dirty ? 'Unsaved changes' : savedNote;
+    },
+  });
+  saved = JSON.stringify(editor.getGeometry());
 
   function showInfo(v) {
     info.replaceChildren(
@@ -45,7 +55,7 @@ export async function render(el, ctx) {
 
   async function loadVersions() {
     const res = await api(`${base}/plan/versions`);
-    versionsBox.replaceChildren(h('h2', null, 'Versions'), h('ol', { class: 'version-list', reversed: true }, res.versions.map((v) => h('li', { class: v.version_no === shown.version_no ? 'active' : '' },
+    versionsBox.replaceChildren(h('h3', { class: 'sr-only' }, 'Versions'), h('ol', { class: 'version-list', reversed: true }, res.versions.map((v) => h('li', { class: v.version_no === shown.version_no ? 'active' : '' },
       h('div', { class: 'row gap wrap' }, h('strong', null, `v${v.version_no}`), h('span', null, v.label || '—')),
       h('div', { class: 'muted small' }, `${v.author_role} · ${fmtDate(v.created_at)}`),
       h('div', { class: 'row gap wrap' }, reviewBadge(v), v.review_flags && v.review_flags.length ? badge(`${v.review_flags.length} flag(s)`, 'warn') : null),
@@ -100,30 +110,20 @@ export async function render(el, ctx) {
       if (!v) return;
       current = v;
       Object.assign(shown, v);
+      saved = JSON.stringify(editor.getGeometry());
       dirty = false;
       label.value = '';
-      saveState.textContent = `Saved as version ${v.version_no}`;
+      savedNote = `Saved as version ${v.version_no}`;
+      saveState.textContent = savedNote;
       toast(`Saved as version ${v.version_no}${v.review_status === 'provisional' ? ' — flagged for professional review' : ''}`, v.review_status === 'provisional' ? 'warn' : 'info');
       showInfo(v);
       loadVersions();
     });
-    const wizBtn = h('button', { type: 'button', class: 'btn btn-ghost' }, 'Room wizard');
-    wizBtn.addEventListener('click', () => {
-      wizBox.hidden = !wizBox.hidden;
-      if (!wizBox.hidden) {
-        wizBox.replaceChildren(h('h2', null, 'Generate rooms'),
-          isEmpty(editor.getGeometry()) ? null : h('p', { class: 'notice notice-info' }, 'This replaces the current drawing in the editor (you can undo, and nothing is saved until you save a version).'),
-          wizardForm((g) => { editor.setGeometry(g, true); editor.fit(); editor.render(); wizBox.hidden = true; }, { submitLabel: 'Load into editor' }));
-      }
-    });
-    actions.append(label, save, saveState, wizBtn);
-    if (isEmpty(shown.geometry)) wizBtn.click();
+    actions.append(saveState, label, save);
   }
 
   showInfo(shown);
-  el.append(h('div', { class: 'plan-layout' },
-    h('div', { class: 'plan-main' }, actions, err, info, wizBox, host),
-    versionsBox));
+  el.append(h('div', { class: 'plan-main' }, h('div', { class: 'plan-bar' }, info, actions), err, host));
   await loadVersions();
 
   const warn = (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } };

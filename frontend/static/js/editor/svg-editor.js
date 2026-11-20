@@ -1,5 +1,6 @@
 // SVG floor-plan editor. Geometry follows the API contract: mm, origin top-left, y down.
 import { h, s, select, field, toast } from '../dom.js';
+import { icon } from '../icons.js';
 
 export const CAVEAT = 'Conceptual plan — changes to walls, openings, kitchens or bathrooms require review by a qualified professional before any construction.';
 export const ROOM_KINDS = ['living', 'bedroom', 'kitchen', 'bathroom', 'dining', 'office', 'hallway', 'other'];
@@ -40,7 +41,9 @@ let instance = 0;
 
 export class PlanEditor {
   /**
-   * opts: geometry, readOnly, catalog (furniture items), highlight (Set of ids), onChange(geometry), panel (bool)
+   * opts: geometry, readOnly, catalog (furniture items), highlight (Set of ids), onChange(geometry), panel (bool),
+   *   title / sheet (sheet header text), wizard (() => Node, adds a "Room wizard" tab), versions (Node, adds a "Versions" tab),
+   *   initialTab ('wizard' | 'library' | 'stats' | 'versions')
    */
   constructor(host, opts = {}) {
     this.uid = `pe${++instance}`;
@@ -87,41 +90,94 @@ export class PlanEditor {
     this.svg.addEventListener('keydown', (e) => this.onKey(e));
 
     const zoomBtns = [
-      this.btn('+', 'Zoom in', () => this.zoom(1 / 1.25)),
-      this.btn('−', 'Zoom out', () => this.zoom(1.25)),
-      this.btn('Fit', 'Fit plan to view', () => { this.fit(); this.render(); }),
+      this.btn(null, 'Zoom out', () => this.zoom(1.25), 'remove'),
+      this.btn(null, 'Zoom in', () => this.zoom(1 / 1.25), 'add'),
+      this.btn('Fit', 'Fit plan to view', () => { this.fit(); this.render(); }, 'fit_screen'),
     ];
     let toolbar = null;
     if (!this.readOnly) {
       this.toolBtns = {};
-      const tools = [['select', 'Select / move', 'V'], ['wall', 'Draw wall', 'W'], ['door', 'Add door', 'D'], ['window', 'Add window', 'O'], ['room', 'Add room', 'P']];
+      const tools = [['select', 'Select / move', 'V', 'near_me', 'Select'], ['wall', 'Draw wall', 'W', 'draw', 'Wall'], ['door', 'Add door', 'D', 'sensor_door', 'Door'],
+        ['window', 'Add window', 'O', 'window', 'Window'], ['room', 'Add room', 'P', 'meeting_room', 'Room']];
       toolbar = h('div', { class: 'editor-toolbar', role: 'toolbar', 'aria-label': 'Plan tools' },
-        h('div', { class: 'btn-group' }, tools.map(([t, label, key]) => {
-          const b = this.btn(label, `${label} (${key})`, () => this.setTool(t));
+        h('div', { class: 'btn-group tool-group' }, tools.map(([t, label, key, ic, short]) => {
+          const b = this.btn([h('span', null, short), h('kbd', null, key)], `${label} (${key})`, () => this.setTool(t), ic);
           b.setAttribute('aria-pressed', String(t === this.tool));
           this.toolBtns[t] = b;
           return b;
         })),
         h('div', { class: 'btn-group' },
-          (this.undoBtn = this.btn('Undo', 'Undo (Ctrl+Z)', () => this.undo())),
-          (this.redoBtn = this.btn('Redo', 'Redo (Ctrl+Shift+Z)', () => this.redo()))),
-        h('div', { class: 'btn-group' }, zoomBtns));
+          (this.undoBtn = this.btn(null, 'Undo (Ctrl+Z)', () => this.undo(), 'undo')),
+          (this.redoBtn = this.btn(null, 'Redo (Ctrl+Shift+Z)', () => this.redo(), 'redo'))),
+        h('div', { class: 'btn-group' }, zoomBtns),
+        h('span', { class: 'tool-chip' }, icon('straighten', 16), `Snap ${SNAP} mm`));
     } else {
       toolbar = h('div', { class: 'editor-toolbar', role: 'toolbar', 'aria-label': 'View controls' }, h('div', { class: 'btn-group' }, zoomBtns));
     }
-    this.panel = h('aside', { class: 'editor-panel', 'aria-label': 'Selection and catalog' });
     const showPanel = this.opts.panel !== false;
+    this.selBar = h('div', { class: 'sel-bar', role: 'group', 'aria-label': 'Selection', hidden: true });
+    this.scaleLine = h('p', { class: 'sheet-scale' });
+    const sheet = showPanel ? h('div', { class: 'sheet-head' },
+      h('div', { class: 'row gap wrap' }, h('span', { class: 'sheet-chip' }, this.opts.sheet || 'Plan'), h('h2', { class: 'sheet-title' }, this.opts.title || 'Floor plan')),
+      this.scaleLine) : null;
+    this.panel = h('aside', { class: 'editor-panel', 'aria-label': 'Selection and catalog' });
+    if (showPanel) this.buildTabs();
     this.root = h('div', { class: `editor ${showPanel ? '' : 'editor-nopanel'}` },
-      toolbar,
-      h('p', { class: 'small-screen-hint' }, 'The plan editor works best on a larger screen; drag the empty canvas to pan.'),
-      h('div', { class: 'editor-body' }, h('div', { class: 'editor-canvas' }, this.svg, this.status), showPanel ? this.panel : null));
+      h('div', { class: 'editor-main' },
+        toolbar,
+        h('p', { class: 'small-screen-hint' }, 'The plan editor works best on a larger screen; drag the empty canvas to pan.'),
+        h('div', { class: 'editor-canvas' }, sheet, h('div', { class: 'canvas-wrap' }, this.svg, this.selBar), this.status)),
+      showPanel ? this.panel : null);
     host.append(this.root);
     this.renderPanel();
     this.updateStatus();
   }
 
-  btn(label, title, onClick) {
-    return h('button', { type: 'button', class: 'btn btn-small', title, 'aria-label': title, onclick: onClick }, label);
+  buildTabs() {
+    const ro = this.readOnly;
+    const defs = [this.opts.wizard && !ro ? ['wizard', 'Room wizard'] : null, !ro && this.catalog.length ? ['library', 'Library'] : null,
+      ['stats', 'Space stats'], this.opts.versions ? ['versions', 'Versions'] : null].filter(Boolean);
+    this.selBox = h('section', { class: 'panel-sel' });
+    this.tabs = {};
+    const list = h('div', { class: 'panel-tabs', role: 'tablist', 'aria-label': 'Editor panel' });
+    const bodies = defs.map(([k, label]) => {
+      const tab = h('button', { type: 'button', role: 'tab', id: `${this.uid}-tab-${k}`, 'aria-controls': `${this.uid}-tp-${k}`, class: 'panel-tab', onclick: () => this.showTab(k) }, label);
+      const body = h('div', { role: 'tabpanel', id: `${this.uid}-tp-${k}`, 'aria-labelledby': tab.id, class: 'tab-body', tabindex: '0' });
+      if (k === 'versions') body.append(this.opts.versions);
+      this.tabs[k] = { tab, body };
+      list.append(tab);
+      return body;
+    });
+    list.addEventListener('keydown', (e) => {
+      const keys = Object.keys(this.tabs);
+      const i = keys.indexOf(this.activeTab);
+      const j = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: keys.length - 1 }[e.key];
+      if (j === undefined) return;
+      e.preventDefault();
+      const k = keys[(j + keys.length) % keys.length];
+      this.showTab(k);
+      this.tabs[k].tab.focus();
+    });
+    this.panel.append(this.selBox, list, ...bodies);
+    const want = this.opts.initialTab;
+    this.showTab(this.tabs[want] ? want : this.tabs.library ? 'library' : 'stats');
+  }
+
+  showTab(k) {
+    if (!this.tabs || !this.tabs[k]) return;
+    this.activeTab = k;
+    for (const [key, { tab, body }] of Object.entries(this.tabs)) {
+      const on = key === k;
+      tab.setAttribute('aria-selected', String(on));
+      tab.tabIndex = on ? 0 : -1;
+      body.hidden = !on;
+    }
+    // the wizard is rebuilt on every visit so its "replaces the drawing" notice matches the current plan
+    if (k === 'wizard') this.tabs.wizard.body.replaceChildren(this.opts.wizard(this));
+  }
+
+  btn(label, title, onClick, ic) {
+    return h('button', { type: 'button', class: 'btn btn-small', title, 'aria-label': title, onclick: onClick }, ic ? icon(ic, 18) : null, label);
   }
 
   setTool(t) {
@@ -553,10 +609,12 @@ export class PlanEditor {
 
   // ---------- side panel ----------
   renderPanel() {
+    this.renderSheet();
+    this.renderSelBar();
     if (this.opts.panel === false) return;
     const parts = [];
     const all = [];
-    for (const k of LAYERS) for (const e of this.g[k]) all.push([`${k}:${e.id}`, `${k.slice(0, -1)} · ${e.name || e.label || e.kind || e.catalog_key || e.id}`]);
+    for (const k of LAYERS) for (const e of this.g[k]) all.push([`${k}:${e.id}`, `${k.slice(0, -1)} · ${this.itemName(k, e)}`]);
     if (all.length) {
       const jump = select([['', 'Choose an element…'], ...all], this.sel ? `${this.sel.type}:${this.sel.id}` : '');
       jump.addEventListener('change', () => {
@@ -568,9 +626,55 @@ export class PlanEditor {
     }
     const it = this.sel && this.find(this.sel.type, this.sel.id);
     if (it) parts.push(this.selectionForm(this.sel.type, it));
-    else parts.push(h('p', { class: 'muted small' }, this.readOnly ? 'Select an element to see its details.' : 'Select an element to edit it, or place furniture and fixtures from the catalog below.'));
-    if (!this.readOnly && this.catalog.length) parts.push(this.catalogList());
-    this.panel.replaceChildren(...parts);
+    else parts.push(h('p', { class: 'muted small' }, this.readOnly ? 'Select an element to see its details.' : 'Select an element to edit it, or place furniture and fixtures from the Library tab.'));
+    this.selBox.replaceChildren(...parts);
+    if (this.tabs.library) this.tabs.library.body.replaceChildren(this.catalogList());
+    this.tabs.stats.body.replaceChildren(this.statsView());
+  }
+
+  itemName(type, e) { return e.name || e.label || (type === 'furniture' ? this.catalogName(e.catalog_key) : '') || e.kind || e.id; }
+
+  typeTitle(type, it) { return { walls: 'Wall', openings: it.kind === 'door' ? 'Door' : 'Window', rooms: 'Room', furniture: 'Furniture', fixtures: 'Fixture' }[type]; }
+
+  totalArea() { return this.g.rooms.reduce((a, r) => a + polygonArea(r.polygon), 0) / 1e6; }
+
+  renderSheet() {
+    const n = this.g.rooms.length;
+    this.scaleLine.textContent = `Grid ${SNAP} mm · major grid 1 m · ${n} room${n === 1 ? '' : 's'} · ${this.totalArea().toFixed(1)} m² · ${this.g.walls.length} walls`;
+  }
+
+  // floating bar over the canvas (Stitch): what is selected plus its quick actions
+  renderSelBar() {
+    const it = this.sel && this.find(this.sel.type, this.sel.id);
+    this.selBar.hidden = !it;
+    if (!it) { this.selBar.replaceChildren(); return; }
+    const { type } = this.sel;
+    const title = this.typeTitle(type, it);
+    const actions = [];
+    if (!this.readOnly && ['furniture', 'fixtures'].includes(type)) {
+      actions.push(h('button', { type: 'button', class: 'btn btn-small btn-ghost', onclick: () => this.rotateSelected() }, icon('rotate_right', 18), 'Rotate 90°'));
+    }
+    if (!this.readOnly) actions.push(h('button', { type: 'button', class: 'btn btn-small btn-ghost btn-danger', onclick: () => this.deleteSelected() }, icon('delete', 18), `Delete ${title.toLowerCase()}`));
+    this.selBar.replaceChildren(h('span', { class: 'sel-dot', 'aria-hidden': 'true' }),
+      h('strong', { class: 'sel-name' }, `${title}: ${this.itemName(type, it)}`), h('span', { class: 'sel-tag' }, '(Selected)'), ...actions);
+  }
+
+  statsView() {
+    const g = this.g;
+    const count = (kind) => g.openings.filter((o) => o.kind === kind).length;
+    const tile = (label, value) => h('div', { class: 'mini-stat' }, h('span', { class: 'label-mono' }, label), h('strong', null, value));
+    return h('section', { class: 'space-stats' },
+      h('div', { class: 'mini-stats' }, tile('Room area', `${this.totalArea().toFixed(2)} m²`), tile('Rooms', String(g.rooms.length))),
+      h('dl', { class: 'facts' },
+        h('dt', null, 'Walls'), h('dd', null, `${g.walls.length} (${g.walls.filter((w) => w.structural).length} structural)`),
+        h('dt', null, 'Doors'), h('dd', null, String(count('door'))),
+        h('dt', null, 'Windows'), h('dd', null, String(count('window'))),
+        h('dt', null, 'Furniture'), h('dd', null, String(g.furniture.length)),
+        h('dt', null, 'Fixtures'), h('dd', null, String(g.fixtures.length))),
+      g.rooms.length ? h('div', { class: 'table-wrap' }, h('table', null,
+        h('thead', null, h('tr', null, ['Room', 'Type', 'Area'].map((x) => h('th', { scope: 'col' }, x)))),
+        h('tbody', null, g.rooms.map((r) => h('tr', null, h('td', null, r.name || r.kind), h('td', null, r.kind), h('td', { class: 'mono' }, `${(polygonArea(r.polygon) / 1e6).toFixed(2)} m²`)))))) : h('p', { class: 'muted small' }, 'No rooms yet.'),
+      h('p', { class: 'hint' }, 'Areas are computed from the room outlines you drew — conceptual, not surveyed.'));
   }
 
   numInput(value, onSet, { min = 1, max = 20000, step = 10 } = {}) {
@@ -586,7 +690,7 @@ export class PlanEditor {
   selectionForm(type, it) {
     const ro = this.readOnly;
     const rows = [];
-    const title = { walls: 'Wall', openings: it.kind === 'door' ? 'Door' : 'Window', rooms: 'Room', furniture: 'Furniture', fixtures: 'Fixture' }[type];
+    const title = this.typeTitle(type, it);
     if (type === 'walls') {
       const L = len(it.a, it.b);
       rows.push(h('p', { class: 'dim-readout' }, `Length ${Math.round(L)} mm (${(L / 1000).toFixed(2)} m)`));
@@ -619,9 +723,8 @@ export class PlanEditor {
       }
       rows.push(field('Width (mm)', this.numInput(it.w, (x, v) => { x.w = v; }, { min: 10, max: 10000 })));
       rows.push(field('Depth (mm)', this.numInput(it.d, (x, v) => { x.d = v; }, { min: 10, max: 10000 })));
-      if (!ro) rows.push(h('button', { type: 'button', class: 'btn btn-small', onclick: () => this.rotateSelected() }, 'Rotate 90°'));
     }
-    if (!ro) rows.push(h('button', { type: 'button', class: 'btn btn-small btn-danger', onclick: () => this.deleteSelected() }, `Delete ${title.toLowerCase()}`));
+    // Rotate / Delete live in the floating selection bar over the canvas
     return h('section', { class: 'sel-form' }, h('h3', null, title), rows);
   }
 
@@ -632,7 +735,7 @@ export class PlanEditor {
     filter.addEventListener('change', () => { this.catFilter = filter.value; this.renderPanel(); });
     const isFixture = ['kitchen', 'bathroom'].includes(this.catFilter);
     return h('section', { class: 'catalog' },
-      h('h3', null, 'Catalog'),
+      h('h3', { class: 'sr-only' }, 'Catalog'),
       field('Category', filter, isFixture ? 'Kitchen and bathroom items are placed as fixtures and flag the plan for professional review.' : null),
       h('ul', { class: 'catalog-list' }, this.catalog.filter((i) => i.category === this.catFilter).map((i) => h('li', null,
         h('button', { type: 'button', class: 'catalog-item', onclick: () => this.placeCatalog(i), 'aria-label': `Place ${i.name}` },
