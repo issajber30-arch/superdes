@@ -334,3 +334,55 @@
 .pv-btn { padding: .4rem .9rem; border-radius: 2px; background: var(--brand-primary); color: var(--on-primary); font-size: 13px; font-weight: 600; }
 .pv-accent { padding: .4rem .9rem; border-radius: 2px; background: var(--brand-accent); color: #fff; font-size: 13px; font-weight: 600; }
 .pv-foot { margin: auto 0 0; font: 500 10px/1.5 var(--font-mono); color: var(--muted); }
+
+/* ---------- review & markups (Stitch "Designer Review & Markups Dashboard") ---------- */
+.review-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.review-head .handover-title { margin: 0; }
+.review-sub { font: italic 400 20px/1.3 var(--font-head); color: var(--muted); }
+.boundary { display: flex; flex-wrap: wrap; align-items: flex-start; gap: .5rem 1rem; padding: .75rem 1rem; margin-bottom: 1.5rem; border-radius: var(--radius); background: var(--surface-container); }
+.boundary p { flex: 1 1 320px; }
+.review-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; align-items: start; }
+@media (min-width: 1024px) { .review-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1280px) { .review-grid { grid-template-columns: minmax(0, 5fr) minmax(0, 4fr) minmax(0, 3fr); } }
+.review-col { display: flex; flex-direction: column; gap: 1rem; min-width: 0; scroll-margin-top: calc(var(--topbar-h) + .5rem); }
+.col-head { font-size: 20px; line-height: 28px; font-weight: 400; letter-spacing: -.01em; margin: 0; }
+.redline-pane { position: relative; border-radius: 2px; overflow: hidden; }
+.pane-tag { position: absolute; z-index: 2; top: .5rem; right: .5rem; padding: .125rem .5rem; border-radius: 2px; background: color-mix(in srgb, var(--brand-primary) 85%, transparent); color: var(--on-primary); font: 500 10px/14px var(--font-mono); }
+.markup { display: flex; align-items: flex-start; gap: .5rem; padding: .5rem; border-radius: 2px; background: var(--surface-low); }
+.markup-no { width: 24px; height: 24px; flex: none; border-radius: 50%; background: var(--secondary); color: #fff; display: inline-flex; align-items: center; justify-content: center; font: 600 11px/1 var(--font-mono); }
+.markup:nth-child(3n+1) .markup-no { background: var(--err); }
+.markup:nth-child(3n) .markup-no { background: var(--brand-primary); }
+.spec-card { padding: .75rem; border-radius: 2px; background: var(--surface-container); display: flex; flex-direction: column; gap: .375rem; }
+.spec-card h4 { margin: 0; font-size: 15px; line-height: 22px; font-weight: 500; }
+.rate-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; padding: .5rem; border-radius: 2px; background: var(--surface-low); font-size: 12px; }
+.rate-grid > div { display: flex; flex-direction: column; min-width: 0; }
+.dark-card { background: var(--brand-primary); color: var(--on-primary); border-radius: var(--radius); padding: 1rem; display: flex; flex-direction: column; gap: 1rem; box-shadow: var(--shadow-float); }
+.dark-card h2 { color: var(--on-primary); font-family: var(--brand-font), var(--font-system); font-size: 20px; line-height: 28px; font-weight: 500; margin: 0; }
+.dark-card .label-mono { color: #c5c6cb; }
+.chip-bright { padding: .25rem .5rem; border-radius: 2px; background: #006398; color: #fff; font: 600 10px/14px var(--font-mono); white-space: nowrap; }
+.chip-bright.over { background: var(--err); }
+.dark-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+.dark-tiles > div { background: rgba(255, 255, 255, .08); padding: .75rem; border-radius: 2px; display: flex; flex-direction: column; gap: .125rem; min-width: 0; }
+.dark-tiles strong { font: 400 22px/1.2 var(--font-head); overflow-wrap: anywhere; }
+.dark-tiles .small { color: #c5c6cb; }
+.dark-tiles .bright { color: #93ccff; }
+.env-bar.dark { background: rgba(255, 255, 255, .15); }
+.env-bar.dark .env-fill:not(.over) { background: #5bb8fe; }
+.decision { padding: .75rem; border-radius: 2px; background: var(--surface-container); display: flex; flex-direction: column; gap: .375rem; }
+.quote { margin: 0; font: italic 400 15px/1.45 var(--font-head); color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; }
+.status-tag.status-warn { background: var(--warn-bg); color: var(--warn); }
+.task-card { padding: .625rem .75rem; border-radius: 2px; background: var(--surface-container); display: flex; flex-direction: column; gap: .25rem; }
+.task-card.task-done .task-name { text-decoration: line-through; color: var(--muted); }
+.task-name { margin: 0; font-size: 14px; line-height: 20px; font-weight: 500; overflow-wrap: anywhere; }
+.task-controls select { flex: 1 1 120px; min-height: 30px; font-size: 12px; padding: .15rem .4rem; }
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: 0; border-radius: 2px; background: var(--surface-container); color: var(--text); cursor: pointer; flex: none; }
+.icon-btn:hover { background: var(--surface-high); }
+.msg-thread { display: flex; flex-direction: column; gap: .5rem; max-height: 360px; overflow-y: auto; }
+
+/* ---------- brief (no Stitch screen of its own: Stitch section cards in two columns) ---------- */
+.brief-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; align-items: start; }
+@media (min-width: 1024px) { .brief-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.brief-sec { margin: 0; border: 0; }
+.brief-grid > .step-bar, .brief-grid > .notice { grid-column: 1 / -1; }
+.brief-save { position: sticky; bottom: 3rem; z-index: 5; margin-top: 0; align-items: center; }
+.brief-save p { margin: 0 auto 0 0; }

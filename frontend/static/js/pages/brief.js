@@ -1,6 +1,7 @@
 // Brief tab: every category of the Brief object.
 import { api, apiUrl, errorText } from '../api.js';
 import { h, field, notice, busy, select, fmtDate, toast } from '../dom.js';
+import { icon } from '../icons.js';
 
 const list = (v) => v.split(/[\n,]/).map((x) => x.trim()).filter(Boolean);
 const lines = (v) => v.split('\n').map((x) => x.trim()).filter(Boolean);
@@ -72,19 +73,20 @@ export async function render(el, ctx) {
 
   const saveBtn = h('button', { type: 'submit', class: 'btn btn-primary' }, 'Save brief');
   const meta = h('p', { class: 'muted small' }, res.updated_at ? `Last saved ${fmtDate(res.updated_at)}` : 'Not saved yet.');
-  const sec = (title, ...kids) => h('fieldset', { class: 'card' }, h('legend', null, title), kids);
-  const form = h('form', { class: 'brief form', novalidate: true },
-    sec('Style', h('div', { class: 'chips', role: 'group', 'aria-label': 'Preferred styles' }, styleBoxes), field('Other styles', extraStyles, 'Comma separated.'),
+  const sec = (ic, title, ...kids) => h('fieldset', { class: 'sheet-card brief-sec' }, h('legend', { class: 'sr-only' }, title),
+    h('div', { class: 'row gap-sm', 'aria-hidden': 'true' }, h('span', { class: 'secondary-text' }, icon(ic, 20)), h('h2', { class: 'section-title' }, title)), kids);
+  const form = h('form', { class: 'brief brief-grid', novalidate: true },
+    sec('palette', 'Style', h('div', { class: 'chips', role: 'group', 'aria-label': 'Preferred styles' }, styleBoxes), field('Other styles', extraStyles, 'Comma separated.'),
       field('Colours you like', colors, 'Comma separated, e.g. warm white, sage, oak.'), field('Materials', materials, 'Comma separated.')),
-    sec('Budget', h('div', { class: 'row gap wrap' }, field('Minimum', bmin), field('Maximum', bmax), field('Currency', currency)), field('Priority', priority)),
-    sec('Needs and lifestyle', field('Functional needs', functional, 'One per line, e.g. storage for 200 books.'),
+    sec('payments', 'Budget', h('div', { class: 'row gap wrap' }, field('Minimum', bmin), field('Maximum', bmax), field('Currency', currency)), field('Priority', priority)),
+    sec('assignment_ind', 'Needs and lifestyle', field('Functional needs', functional, 'One per line, e.g. storage for 200 books.'),
       field('Lifestyle', lifestyle, 'One per line.'), field('Constraints', constraints, 'One per line, e.g. rented flat, no drilling.')),
-    sec('Household', h('div', { class: 'row gap wrap' }, field('Adults', adults), field('Children', children)), field('Pets', pets, 'Comma separated.'),
+    sec('group', 'Household', h('div', { class: 'row gap wrap' }, field('Adults', adults), field('Children', children)), field('Pets', pets, 'Comma separated.'),
       h('label', { class: 'check' }, wfh, ' Someone works from home'), field('Accessibility needs', access)),
-    sec('Inspiration', uploadBoxes, h('div', { class: 'row gap wrap' }, field('Add an image', file), upBtn), field('Links', urls, 'One http(s) link per line.')),
-    sec('Existing furniture', itemsBox, h('button', { type: 'button', class: 'btn btn-small', onclick: () => addItem() }, 'Add item')),
-    sec('Notes', field('Anything else', notes)),
-    h('div', { class: 'row gap' }, saveBtn, meta), err);
+    sec('photo_camera', 'Inspiration', uploadBoxes, h('div', { class: 'row gap wrap' }, field('Add an image', file), upBtn), field('Links', urls, 'One http(s) link per line.')),
+    sec('chair', 'Existing furniture', itemsBox, h('button', { type: 'button', class: 'btn btn-small', onclick: () => addItem() }, 'Add item')),
+    sec('edit_note', 'Notes', field('Anything else', notes)),
+    h('div', { class: 'step-bar brief-save' }, meta, saveBtn), err);
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -118,5 +120,6 @@ export async function render(el, ctx) {
       } catch (ex) { err.show(errorText(ex)); }
     });
   });
-  el.append(h('p', { class: 'muted' }, 'The brief guides the AI consultant, estimates and the dossier.'), form);
+  el.append(h('div', { class: 'handover-head' }, h('div', null, h('div', { class: 'row gap-sm' }, h('span', { class: 'chip-dark' }, 'Step 2'), h('span', { class: 'label-mono flat secondary-text' }, 'Design brief')),
+    h('h2', { class: 'handover-title' }, 'Client design brief'), h('p', { class: 'muted flat' }, 'The brief guides the AI consultant, estimates and the dossier.'))), form);
 }
