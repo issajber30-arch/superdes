@@ -116,7 +116,7 @@ Each environment is **one service**: the API also serves the frontend (`SERVE_FR
 | `production` | Render (free) | `main` | Supabase (`app_user` through the session pooler) + Supabase Storage |
 | `dev` | Railway | `dev` | Railway Postgres |
 
-Build: `pip install -r requirements.txt` (repo root). Start: the `startCommand` in [`railway.toml`](railway.toml); health check `/health`.
+Build: `pip install -r backend/requirements.txt` (the root `requirements.txt` is only a Python marker for Railpack). Start: the `startCommand` in [`railway.toml`](railway.toml); health check `/health`.
 Set `ENV`, `SERVE_FRONTEND=1`, `DATABASE_URL`, `JWT_SECRET`, and `API_URL` = `FRONTEND_ORIGIN` = the service's public URL. Production refuses to start without `JWT_SECRET`, `DATABASE_URL` and `FRONTEND_ORIGIN`. Migrations run from a trusted machine with `scripts/migrate.py`; the running service never holds the admin login. The full API contract is in [`backend/API.md`](backend/API.md).
 
 ## Status

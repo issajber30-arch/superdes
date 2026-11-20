@@ -1,6 +1,8 @@
 # One service: the API also serves the SPA (SERVE_FRONTEND=1), so page and API share an origin.
 [build]
 builder = "RAILPACK"
+# Railpack copies only requirements.txt before its install step, so the real install runs here with the full repo
+buildCommand = "pip install -r backend/requirements.txt"
 
 [deploy]
 # --proxy-headers + --forwarded-allow-ips='*': trust X-Forwarded-For/Proto so request.client.host is the real client
