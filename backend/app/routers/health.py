@@ -7,7 +7,8 @@ from ..db import tenant_tx
 router = APIRouter(tags=["health"])
 
 
-@router.get("/health")
+# HEAD too: uptime monitors send HEAD, which would otherwise fall through to the mounted SPA and 404
+@router.api_route("/health", methods=["GET", "HEAD"])
 def health():
     try:
         with tenant_tx() as conn:

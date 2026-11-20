@@ -25,6 +25,18 @@ def test_spa_and_api_share_one_origin(monkeypatch):
     assert c.get("/nope.txt").status_code == 404
 
 
+def test_health_answers_head_with_the_spa_mounted(monkeypatch):
+    # uptime monitors send HEAD; it must not fall through to the static mount (404)
+    monkeypatch.setenv("API_URL", "https://superdes.example.com")
+    from app.routers import health
+    target = FastAPI()
+    target.include_router(health.router)
+    mount_frontend(target)
+    c = TestClient(target)
+    assert c.head("/health").status_code == 200
+    assert c.get("/health").json()["status"] == "ok"
+
+
 def test_bad_api_url_refuses_to_start(monkeypatch):
     monkeypatch.setenv("API_URL", "javascript:alert(1)")
     try:
