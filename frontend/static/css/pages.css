@@ -283,3 +283,54 @@
 .audit-grid .fact { background: var(--surface-low); padding: .375rem .5rem; border-radius: 2px; }
 .audit-grid .fact strong { font: 500 11px/16px var(--font-mono); }
 .disclaimer-bar { display: flex; align-items: flex-start; gap: .5rem; margin-top: 1.5rem; padding: 1rem; background: var(--surface-low); border-radius: var(--radius); box-shadow: var(--shadow); }
+
+/* ---------- branding (Stitch "White-Label Studio Branding Settings") ---------- */
+.align-start { align-items: flex-start; }
+.section-title { font-family: var(--brand-font), var(--font-system) !important; font-size: 18px !important; line-height: 26px !important; font-weight: 600 !important; letter-spacing: -.01em; }
+.two-col { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+@media (min-width: 768px) { .two-col { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.link-box { display: block; padding: .5rem .75rem; border-radius: 2px; background: var(--surface-low); font: 500 12px/16px var(--font-mono); overflow-wrap: anywhere; }
+.asset-strip { flex-direction: row; flex-wrap: wrap; justify-content: space-between; gap: 1rem; padding: 1rem; }
+.mark-tile { width: 112px; height: 64px; border-radius: 2px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: var(--surface-highest); color: var(--brand-primary); font: 400 14px/1.1 var(--font-head); letter-spacing: .12em; text-align: center; padding: .25rem; }
+.mark-tile.dark { background: var(--brand-primary); color: var(--on-primary); }
+.mark-tile img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.preset-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+@media (min-width: 768px) { .preset-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.preset { text-align: left; padding: 1rem; border-radius: var(--radius-lg); border: 0; background: var(--surface-container); cursor: pointer; display: flex; flex-direction: column; gap: .5rem; font: inherit; color: var(--text); }
+.preset:hover { background: var(--surface-high); }
+.preset[aria-pressed=true] { background: var(--surface-low); box-shadow: 0 0 0 2px var(--secondary); }
+.preset[aria-pressed=true] .dot { background: var(--secondary); }
+.preset-swatches { display: flex; gap: .25rem; height: 24px; border-radius: 2px; overflow: hidden; }
+.preset-swatches > div { flex: 1; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .06); }
+.type-sample { margin: 0; padding: .75rem; border-radius: 2px; background: var(--surface); font-size: 20px; line-height: 1.35; font-style: italic; }
+.tpl-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .25rem; }
+.tpl-btn { display: flex; flex-direction: column; align-items: center; gap: .125rem; padding: .5rem .25rem; border-radius: 2px; border: 1px solid transparent; background: var(--surface-container); cursor: pointer; font: 600 12px/16px var(--brand-font), var(--font-system); color: var(--text); text-align: center; }
+.tpl-btn[aria-pressed=true] { background: var(--surface); border-color: var(--secondary); }
+.branding-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; margin-top: 1.5rem; align-items: start; }
+@media (min-width: 1024px) { .branding-grid { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); } .branding-side { position: sticky; top: calc(var(--topbar-h) + 1rem); } }
+.branding-side { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+.browser { border-radius: var(--radius-lg); overflow: hidden; background: var(--surface-highest); box-shadow: inset 0 2px 4px rgba(0, 0, 0, .05); }
+.browser-bar { display: flex; align-items: center; gap: .5rem; padding: .375rem .5rem; background: var(--surface-high); }
+.traffic { display: inline-flex; gap: .25rem; }
+.traffic i { width: 10px; height: 10px; border-radius: 50%; background: #ba1a1a; opacity: .75; }
+.traffic i:nth-child(2) { background: #f5bb88; }
+.traffic i:nth-child(3) { background: #93ccff; }
+.browser-bar .url { flex: 1; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: .25rem; background: var(--surface); border-radius: 2px; padding: .125rem .5rem; font: 500 11px/16px var(--font-mono); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--text); }
+.browser-bar .url .icon { color: var(--secondary); flex: none; }
+.pv-body { background: var(--brand-bg); font-family: var(--brand-font), var(--font-system); padding: 1rem; display: flex; flex-direction: column; gap: .75rem; min-height: 420px; color: var(--text); }
+.pv-bar { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .5rem; border-radius: 2px; background: color-mix(in srgb, var(--brand-bg) 80%, #e9e8e5); }
+.pv-body[data-template=modern] .pv-bar { border-bottom: 3px solid var(--brand-accent); }
+.pv-body[data-template=minimal] .pv-bar { background: transparent; border-bottom: 1px solid var(--line); }
+.pv-body[data-template=classic] .pv-title { font-family: var(--font-head); }
+.pv-logo { width: 24px; height: 24px; flex: none; border-radius: 2px; background: var(--brand-primary); color: var(--on-primary); display: flex; align-items: center; justify-content: center; font: 400 13px/1 var(--font-head); overflow: hidden; }
+.pv-logo img { width: 100%; height: 100%; object-fit: contain; background: #fff; }
+.pv-name { font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pv-chip { align-self: flex-start; padding: .125rem .5rem; border-radius: 2px; background: color-mix(in srgb, var(--brand-accent) 20%, #fff); font: 500 10px/14px var(--font-mono); }
+.pv-title { margin: 0; font-size: 22px; line-height: 1.25; font-weight: 400; }
+.pv-text { margin: 0; color: var(--muted); font-size: 13px; }
+.pv-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+.pv-tiles > div { background: color-mix(in srgb, var(--brand-bg) 85%, #dbdad7); padding: .5rem; border-radius: 2px; display: flex; flex-direction: column; }
+.pv-body[data-template=minimal] .pv-tiles > div { background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
+.pv-btn { padding: .4rem .9rem; border-radius: 2px; background: var(--brand-primary); color: var(--on-primary); font-size: 13px; font-weight: 600; }
+.pv-accent { padding: .4rem .9rem; border-radius: 2px; background: var(--brand-accent); color: #fff; font-size: 13px; font-weight: 600; }
+.pv-foot { margin: auto 0 0; font: 500 10px/1.5 var(--font-mono); color: var(--muted); }
