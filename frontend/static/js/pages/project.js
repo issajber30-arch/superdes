@@ -8,14 +8,13 @@ import * as plan from './plan.js';
 import * as brief from './brief.js';
 import * as workbench from './workbench.js';
 import * as compare from './compare.js';
-import * as budget from './budget.js';
+import * as handover from './handover.js';
 import * as collab from './collab.js';
-import * as dossier from './dossier.js';
 
 // [route key, label, icon]; labels stay as before so links and tests keep working
 const TABS = [['plan', 'Plan', plan, 'architecture'], ['brief', 'Brief', brief, 'edit_note'], ['design', 'Design', workbench, 'palette'],
   ['ai', 'AI consultant', workbench, 'psychology'], ['renders', 'Renders', workbench, 'photo_camera'], ['compare', 'Compare', compare, 'compare'],
-  ['budget', 'Budget', budget, 'receipt_long'], ['collab', 'Collaboration', collab, 'forum'], ['dossier', 'Dossier', dossier, 'description']];
+  ['budget', 'Budget', handover, 'receipt_long'], ['collab', 'Collaboration', collab, 'forum'], ['dossier', 'Dossier', handover, 'description']];
 // Stitch step group: each step opens its first section and is current for all of its sections
 const STEPS = [['1. Floor plan', ['plan']], ['2. Style & materials', ['brief', 'design']], ['3. AI visualizer', ['ai', 'renders', 'compare']], ['4. Dossier & budget', ['budget', 'dossier']]];
 

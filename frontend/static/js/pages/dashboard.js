@@ -46,7 +46,7 @@ const metric = ({ label, ic, tone, value, unit, note, bar, barTone }) => h('div'
   h('div', null,
     h('div', { class: 'metric-value' }, h('span', { class: 'metric-num' }, value), unit ? h('span', { class: 'metric-unit' }, unit) : null),
     note ? h('div', { class: 'metric-note' }, note) : null),
-  h('div', { class: 'metric-bar' }, h('div', { class: `metric-fill ${barTone || ''}`, style: `width:${Math.round(Math.max(0, Math.min(1, bar)) * 100)}%` })));
+  h('div', { class: 'metric-bar' }, h('div', { class: `metric-fill ${barTone || ''}`, style: { width: `${Math.round(Math.max(0, Math.min(1, bar)) * 100)}%` } })));
 
 const dot = (tone) => h('span', { class: `dot ${tone || ''}`, 'aria-hidden': 'true' });
 
