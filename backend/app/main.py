@@ -1,5 +1,7 @@
 import asyncio
+import importlib.util
 import logging
+import os
 from contextlib import asynccontextmanager
 from urllib.parse import urlsplit
 
@@ -10,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from .config import settings
+from .config import BACKEND_DIR, settings
 from .db import close_pool, open_pool
 from .errors import ApiError, error_json
 from .routers import (ai, audit, auth, branding, briefs, catalog, collab, credits, dossiers, estimates, health, invites,
@@ -100,3 +102,16 @@ async def unhandled(_, exc: Exception):
 for r in (health, auth, studios, branding, credits, audit, invites, projects, plans, briefs, catalog, moodboards,
           estimates, ai, renders, collab, dossiers):
     app.include_router(r.router)
+
+
+def mount_frontend(target: FastAPI):
+    """Serve the SPA (frontend/server.py, with its CSP and /config.js) from this app, after the API routes.
+    One origin for page and API keeps the session cookie first-party: Safari blocks it across *.onrender.com hosts."""
+    spec = importlib.util.spec_from_file_location("frontend_server", BACKEND_DIR.parent / "frontend" / "server.py")
+    frontend = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(frontend)  # reads API_URL; set it (and FRONTEND_ORIGIN) to this service's public URL
+    target.mount("/", frontend.asgi)
+
+
+if os.environ.get("SERVE_FRONTEND", "").strip().lower() in ("1", "true", "yes", "on"):
+    mount_frontend(app)

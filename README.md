@@ -9,7 +9,7 @@ Sketch a floor plan, explore styles with an AI consultant, request concept rende
 ![FastAPI](https://img.shields.io/badge/backend-FastAPI-2F3E46?style=flat-square&labelColor=F4F1EA)
 ![Postgres RLS](https://img.shields.io/badge/data-Postgres%20%2B%20RLS-2F3E46?style=flat-square&labelColor=F4F1EA)
 ![Vanilla JS](https://img.shields.io/badge/frontend-vanilla%20JS%20%2B%20SVG-2F3E46?style=flat-square&labelColor=F4F1EA)
-![Tests](https://img.shields.io/badge/tests-52%20passing-4F7A5A?style=flat-square&labelColor=F4F1EA)
+![Tests](https://img.shields.io/badge/tests-54%20passing-4F7A5A?style=flat-square&labelColor=F4F1EA)
 
 ![SuperDes demo: new project from the room wizard, place a sofa, save v2, ask the AI consultant, request a render, see the budget](docs/demo/superdes-demo.gif)
 
@@ -103,20 +103,21 @@ Optional AI settings go in `backend/.env` (git-ignored, see `backend/.env.exampl
 ### Tests
 
 ```sh
-cd backend && .venv/bin/python -m pytest      # 52 tests: auth, geometry, versions, renders, credits, cross-tenant isolation, preview mode
+cd backend && .venv/bin/python -m pytest      # 54 tests: auth, geometry, versions, renders, credits, cross-tenant isolation, preview mode
 cd frontend && ./smoke.sh                     # 55 API checks against a running backend
 ```
 
-## Deployment (planned)
+## Deployment
 
-One Railway project with two environments, each with a `frontend` and a `backend` service:
+Each environment is **one service**: the API also serves the frontend (`SERVE_FRONTEND=1`), so the page and the API share an origin and the session cookie stays first-party (Safari blocks it across separate `*.onrender.com` / `*.up.railway.app` hosts).
 
-| Environment | Services | Git branch |
-|---|---|---|
-| `dev` | `frontend` (`/frontend`), `backend` (`/backend`) | `dev` |
-| `production` | `frontend` (`/frontend`), `backend` (`/backend`) | `main` |
+| Environment | Host | Git branch | Database |
+|---|---|---|---|
+| `production` | Render (free) | `main` | Supabase (`app_user` through the session pooler) + Supabase Storage |
+| `dev` | Railway | `dev` | Railway Postgres |
 
-Each service has a `railway.toml` with its start command and health check. Each environment gets its own database (Supabase) and secrets. Production refuses to start without `JWT_SECRET`, `DATABASE_URL` and `FRONTEND_ORIGIN`. The full API contract is in [`backend/API.md`](backend/API.md).
+Build: `pip install -r requirements.txt` (repo root). Start: the `startCommand` in [`railway.toml`](railway.toml); health check `/health`.
+Set `ENV`, `SERVE_FRONTEND=1`, `DATABASE_URL`, `JWT_SECRET`, and `API_URL` = `FRONTEND_ORIGIN` = the service's public URL. Production refuses to start without `JWT_SECRET`, `DATABASE_URL` and `FRONTEND_ORIGIN`. Migrations run from a trusted machine with `scripts/migrate.py`; the running service never holds the admin login. The full API contract is in [`backend/API.md`](backend/API.md).
 
 ## Status
 

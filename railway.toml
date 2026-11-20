@@ -1,0 +1,11 @@
+# One service: the API also serves the SPA (SERVE_FRONTEND=1), so page and API share an origin.
+[build]
+builder = "RAILPACK"
+
+[deploy]
+# --proxy-headers + --forwarded-allow-ips='*': trust X-Forwarded-For/Proto so request.client.host is the real client
+# (per-IP rate limits) and the scheme is https (HSTS). Safe only because the host's edge proxy is the sole ingress.
+startCommand = "cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips='*'"
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
