@@ -3,6 +3,7 @@
 import asyncio
 import hashlib
 import logging
+import time
 
 from ...config import settings
 from ...db import tenant_tx
@@ -84,17 +85,34 @@ def run_once(renderer=None) -> bool:
             audit.log(conn, "render.succeeded", sid, uid, "render_job", jid)
     except Exception as e:  # any renderer failure -> job failed + credit refunded
         log.warning("render %s failed", jid, exc_info=e)  # details stay server-side
-        with tenant_tx(uid, sid) as conn:
-            conn.execute("update render_jobs set status = 'failed', error = %s, finished_at = now() where id = %s",
-                         ("Render failed. Your credit was refunded; please try again.", jid))
-            credits.refund_render(conn, sid, uid, jid)
-            audit.log(conn, "render.failed", sid, uid, "render_job", jid)
+        fail_job(uid, sid, jid)
     return True
 
 
+def fail_job(uid, sid, jid):
+    with tenant_tx(uid, sid) as conn:
+        conn.execute("update render_jobs set status = 'failed', error = %s, finished_at = now() where id = %s",
+                     ("Render failed. Your credit was refunded; please try again.", jid))
+        credits.refund_render(conn, sid, uid, jid)  # idempotent: skips if already refunded
+        audit.log(conn, "render.failed", sid, uid, "render_job", jid)
+
+
+def reap_stale(minutes: int = 10):
+    """Fail + refund jobs left 'running' by a worker that died mid-render (crash, OOM, restart)."""
+    with tenant_tx() as conn:
+        stale = conn.execute("select * from render_stale_jobs(%s)", (minutes,)).fetchall()
+    for j in stale:
+        log.warning("render %s stuck in running, failing it", j["id"])
+        fail_job(j["requested_by"], j["studio_id"], j["id"])
+
+
 async def worker_loop(stop: asyncio.Event):
+    last_reap = 0.0
     while not stop.is_set():
         try:
+            if time.monotonic() - last_reap > 60:
+                last_reap = time.monotonic()
+                await asyncio.to_thread(reap_stale)
             busy = await asyncio.to_thread(run_once)
         except Exception:
             log.exception("render worker error")

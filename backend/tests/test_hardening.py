@@ -51,6 +51,10 @@ def test_signup_and_join_rate_limited_per_ip():
     assert r.status_code == 429 and r.json()["error"]["code"] == "rate_limited"
     assert new_client().post("/auth/register", json={"email": f"{uniq()}@example.com", "password": "correct-horse-1",
                                                      "display_name": "x"}).status_code == 429
+    # invite accept shares the bucket; checked before the token, so bogus tokens can't burn argon2 CPU/RAM
+    r = new_client().post("/public/invitations/" + "x" * 32 + "/accept", json={"email": f"{uniq()}@example.com",
+                                                                            "password": "guest-pass-1"})
+    assert r.status_code == 429
 
 
 def test_client_render_quota_staff_unlimited():

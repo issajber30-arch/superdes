@@ -12,7 +12,8 @@ from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatc
 from .config import settings
 from .errors import ApiError
 
-_ph = PasswordHasher()
+# OWASP argon2id minimum (~19 MB/hash); the library default (64 MB) lets 10 parallel logins exceed a 512 MB host.
+_ph = PasswordHasher(time_cost=2, memory_cost=19456, parallelism=1)
 # Verified against when the email is unknown, so login timing does not reveal account existence.
 _DUMMY_HASH = _ph.hash("dummy-password-for-timing")
 

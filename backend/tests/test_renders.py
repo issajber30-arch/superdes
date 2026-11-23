@@ -96,3 +96,20 @@ def test_render_empty_plan(geom):
     jid = c.post(f"/projects/{pid}/renders", json={}).json()["id"]
     run_all()
     assert c.get(f"/projects/{pid}/renders/{jid}").json()["status"] == "succeeded"
+
+
+def test_stale_running_job_is_failed_and_refunded_once():
+    c, _ = designer_with_studio()
+    pid = create_project(c)["id"]
+    stale = c.post(f"/projects/{pid}/renders", json={}).json()["id"]
+    fresh = c.post(f"/projects/{pid}/renders", json={}).json()["id"]
+    assert balance(c) == 48
+    # simulate a worker that died mid-render, and one that is still working
+    admin_sql("update render_jobs set status = 'running', started_at = now() - interval '1 hour' where id = %s", (stale,))
+    admin_sql("update render_jobs set status = 'running', started_at = now() - interval '1 minute' where id = %s", (fresh,))
+    worker.reap_stale()
+    worker.reap_stale()  # second sweep must not refund again
+    assert c.get(f"/projects/{pid}/renders/{stale}").json()["status"] == "failed"
+    assert c.get(f"/projects/{pid}/renders/{fresh}").json()["status"] == "running"
+    assert balance(c) == 49
+    assert [e["reason"] for e in c.get("/studio/credits").json()["ledger"]].count("render_refund") == 1

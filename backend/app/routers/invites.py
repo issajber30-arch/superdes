@@ -10,7 +10,7 @@ from ..db import set_context
 from ..deps import AnonCtx, StaffCtx, get_project, load_membership, session_user_id
 from ..errors import ApiError, forbidden, not_found, preview_closed
 from ..schemas import Email, Register, Strict
-from ..security import hash_token, new_invite_token
+from ..security import client_ip, hash_token, limit, new_invite_token, signup_limiter
 from ..services import audit
 from .auth import create_user, me_payload, set_session_cookie
 
@@ -82,6 +82,7 @@ def accept_invitation(token: Token, body: InviteAccept, ctx: AnonCtx, request: R
     """Logged-in user accepts with their account; otherwise email+password create a new account."""
     if settings.preview_mode:
         raise preview_closed()
+    limit(signup_limiter, client_ip(request), "sign-ups")
     uid = session_user_id(request)
     if uid:
         set_context(ctx.conn, uid)
