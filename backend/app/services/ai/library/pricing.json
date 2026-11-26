@@ -1,20 +1,96 @@
 [
-  {"id": "plans", "title": "SuperDes plans",
-   "keywords": ["pricing", "price", "prices", "plans", "plan cost", "subscription", "starter plan", "studio plan", "pro plan", "how much is superdes", "monthly", "per month"],
-   "answer": "Sample prices for reference, not a quote.\nStarter: 0 EUR/month - 1 designer, 3 active projects, 5 render credits.\nStudio: 49 EUR/month - 3 designers, 25 active projects, 40 render credits a month, studio branding.\nPro: 129 EUR/month - 10 designers, unlimited projects, 150 render credits a month, priority rendering.\nClients never pay for the app: the studio's plan covers them."},
-  {"id": "render-credits", "title": "Render credits",
-   "keywords": ["credit", "credits", "render cost", "render price", "buy credits", "more credits", "credit pack", "out of credits", "insufficient credits"],
-   "answer": "Sample prices for reference, not a quote.\nOne render uses 1 credit; a failed render is refunded automatically. Extra packs: 20 credits for 15 EUR, 100 credits for 60 EUR. Credits belong to the studio, so ask your designer if you run out."},
-  {"id": "designer-fee", "title": "Designer fees",
-   "keywords": ["designer fee", "designer cost", "consultation fee", "hourly rate", "per hour", "hire a designer", "how much does the designer"],
-   "answer": "Sample prices for reference, not a quote.\nTypical studio rates: 90 EUR per hour for consultation, or a package from 1,500 EUR for one room and 4,500 EUR for a full apartment. Your studio sets its own prices: ask your designer for theirs."},
-  {"id": "my-estimate", "title": "Your project estimate",
-   "keywords": ["my design cost", "my project cost", "estimate", "estimated cost", "total cost", "how much will", "cost of my", "within budget", "over budget", "budget check"],
-   "answer": "Sample prices for reference, not a quote.\nFor your current plan and choices, the estimate is $estimate_low to $estimate_high $currency (your budget: $budget_max). It is built from generic furniture and finish prices, not real shop prices; see step 4, Dossier & budget, for the line items."},
-  {"id": "payment", "title": "Paying and invoices",
-   "keywords": ["pay", "payment", "invoice", "invoices", "card", "billing", "refund", "cancel subscription"],
-   "answer": "Sample prices for reference, not a quote.\nThe app does not take payments. Plans are billed to the studio monthly by invoice, and design fees are agreed directly with your designer."},
-  {"id": "free-trial", "title": "Trying SuperDes for free",
-   "keywords": ["free", "trial", "free trial", "try it", "demo", "guest"],
-   "answer": "Sample prices for reference, not a quote.\nThe Starter plan is free with 5 render credits, and a studio's client link lets you try a guest project before registering."}
+ {
+  "id": "plans",
+  "title": "SuperDes plans",
+  "keywords": [
+   "pricing",
+   "plans cost",
+   "plan cost",
+   "subscription",
+   "starter plan",
+   "studio plan",
+   "pro plan",
+   "how much is superdes",
+   "how much does superdes",
+   "per month",
+   "monthly fee"
+  ],
+  "answer": "Sample prices for reference, not a quote.\nStarter: 0 EUR/month - 1 designer, 3 active projects, 5 render credits.\nStudio: 49 EUR/month - 3 designers, 25 active projects, 40 render credits a month, studio branding.\nPro: 129 EUR/month - 10 designers, unlimited projects, 150 render credits a month, priority rendering.\nClients never pay for the app: the studio's plan covers them."
+ },
+ {
+  "id": "render-credits",
+  "title": "Render credits",
+  "keywords": [
+   "credit",
+   "credits",
+   "render cost",
+   "render price",
+   "cost of a render",
+   "buy credits",
+   "credit pack",
+   "out of credits"
+  ],
+  "answer": "Sample prices for reference, not a quote.\nOne render uses 1 credit; a failed render is refunded automatically. Extra packs: 20 credits for 15 EUR, 100 credits for 60 EUR. Credits belong to the studio, so ask your designer if you run out."
+ },
+ {
+  "id": "designer-fee",
+  "title": "Designer fees",
+  "keywords": [
+   "designer fee",
+   "designer cost",
+   "consultation fee",
+   "hourly rate",
+   "hire a designer",
+   "how much does the designer",
+   "how much does a designer"
+  ],
+  "answer": "Sample prices for reference, not a quote.\nTypical studio rates: 90 EUR per hour for consultation, or a package from 1,500 EUR for one room and 4,500 EUR for a full apartment. Your studio sets its own prices: ask your designer for theirs."
+ },
+ {
+  "id": "my-estimate",
+  "title": "Your project estimate",
+  "keywords": [
+   "my design cost",
+   "my project cost",
+   "estimate",
+   "estimated cost",
+   "total cost",
+   "how much will",
+   "within budget",
+   "over budget",
+   "budget check"
+  ],
+  "answer": "Sample prices for reference, not a quote.\nFor your current plan and choices, the estimate is $estimate_low to $estimate_high $currency (your budget: $budget_max). It is built from generic furniture and finish prices, not real shop prices; see step 4, Dossier & budget, for the line items."
+ },
+ {
+  "id": "payment",
+  "title": "Paying and invoices",
+  "keywords": [
+   "payment",
+   "pay for",
+   "invoice",
+   "invoices",
+   "billing",
+   "refund",
+   "cancel subscription",
+   "credit card"
+  ],
+  "answer": "Sample prices for reference, not a quote.\nThe app does not take payments. Plans are billed to the studio monthly by invoice, and design fees are agreed directly with your designer."
+ },
+ {
+  "id": "free-trial",
+  "title": "Trying SuperDes for free",
+  "keywords": [
+   "free trial",
+   "free plan",
+   "is it free",
+   "try it for free",
+   "demo",
+   "guest project",
+   "app free",
+   "superdes free",
+   "does it cost anything"
+  ],
+  "answer": "Sample prices for reference, not a quote.\nThe Starter plan is free with 5 render credits, and a studio's client link lets you try a guest project before registering."
+ }
 ]
