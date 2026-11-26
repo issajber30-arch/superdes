@@ -66,7 +66,60 @@ export class PlanEditor {
     this.ro.observe(this.svg);
   }
 
-  destroy() { this.ro.disconnect(); }
+  destroy() { this.ro.disconnect(); this.close3D(); }
+
+  // ---------- 3D (view3d.js, loaded on first use) ----------
+  /** finishes: {roomId: {floor: '#hex', wall: '#hex'}} shown on the 3D surfaces. */
+  setFinishes(finishes) { this.opts.finishes = finishes; this.update3D(); }
+
+  sceneOpts() { return { finishes: this.opts.finishes, catalog: this.catalog }; }
+
+  update3D(keepView = true) {
+    if (this.v3d && this.sceneModel) this.v3d.update(this.sceneModel(this.g, this.sceneOpts()), keepView);
+  }
+
+  async toggle3D() {
+    if (this.v3d || this.loading3d) { this.close3D(); return; }
+    this.loading3d = true;
+    this.btn3d.setAttribute('aria-pressed', 'true');
+    this.canvasWrap.hidden = true;
+    if (this.zoomGroup) this.zoomGroup.hidden = true;
+    this.view3dHost.hidden = false;
+    this.view3dHost.replaceChildren(h('p', { class: 'muted small view3d-msg' }, 'Loading 3D view…'));
+    try {
+      const [{ View3D, webglAvailable }, { sceneModel }] = await Promise.all([import('./view3d.js'), import('./scene-model.js')]);
+      if (!this.loading3d) return; // closed while loading
+      if (!webglAvailable()) {
+        this.view3dHost.replaceChildren(h('p', { class: 'notice notice-info view3d-msg' }, 'Your browser cannot show 3D (WebGL is off or unsupported). The 2D plan still works.'));
+        return;
+      }
+      this.sceneModel = sceneModel;
+      const stage = h('div', { class: 'view3d-stage' });
+      const bar = h('div', { class: 'view3d-bar', role: 'toolbar', 'aria-label': '3D view controls' },
+        this.btn('Reset', 'Reset the 3D camera', () => this.v3d && this.v3d.resetView(), 'restart_alt'),
+        this.btn('Top', 'View from above', () => this.v3d && this.v3d.topView(), 'map'),
+        h('span', { class: 'muted small' }, 'Drag to orbit · scroll or pinch to zoom · right-drag to pan. Conceptual, not to construction accuracy.'));
+      this.view3dHost.replaceChildren(bar, stage);
+      this.v3d = new View3D(stage);
+      this.update3D(false);
+    } catch (ex) {
+      this.view3dHost.replaceChildren(h('p', { class: 'notice notice-error view3d-msg' }, `The 3D view could not load: ${ex.message}`));
+    } finally {
+      this.loading3d = false;
+    }
+  }
+
+  close3D() {
+    this.loading3d = false;
+    if (this.v3d) { this.v3d.dispose(); this.v3d = null; }
+    if (!this.view3dHost) return;
+    this.view3dHost.hidden = true;
+    this.view3dHost.replaceChildren();
+    this.canvasWrap.hidden = false;
+    if (this.zoomGroup) this.zoomGroup.hidden = false;
+    this.btn3d.setAttribute('aria-pressed', 'false');
+    this.render();
+  }
 
   getGeometry() { return JSON.parse(JSON.stringify(this.g)); }
 
@@ -89,6 +142,9 @@ export class PlanEditor {
     this.svg.addEventListener('wheel', (e) => this.onWheel(e), { passive: false });
     this.svg.addEventListener('keydown', (e) => this.onKey(e));
 
+    this.btn3d = this.btn('3D', 'Show the plan in 3D', () => this.toggle3D(), 'view_in_ar');
+    this.btn3d.setAttribute('aria-pressed', 'false');
+    const viewGroup = h('div', { class: 'btn-group' }, this.btn3d);
     const zoomBtns = [
       this.btn(null, 'Zoom out', () => this.zoom(1.25), 'remove'),
       this.btn(null, 'Zoom in', () => this.zoom(1 / 1.25), 'add'),
@@ -109,11 +165,13 @@ export class PlanEditor {
         h('div', { class: 'btn-group' },
           (this.undoBtn = this.btn(null, 'Undo (Ctrl+Z)', () => this.undo(), 'undo')),
           (this.redoBtn = this.btn(null, 'Redo (Ctrl+Shift+Z)', () => this.redo(), 'redo'))),
-        h('div', { class: 'btn-group' }, zoomBtns),
+        (this.zoomGroup = h('div', { class: 'btn-group' }, zoomBtns)),
+        viewGroup,
         h('span', { class: 'tool-chip' }, icon('straighten', 16), `Snap ${SNAP} mm`));
     } else {
-      toolbar = h('div', { class: 'editor-toolbar', role: 'toolbar', 'aria-label': 'View controls' }, h('div', { class: 'btn-group' }, zoomBtns));
+      toolbar = h('div', { class: 'editor-toolbar', role: 'toolbar', 'aria-label': 'View controls' }, (this.zoomGroup = h('div', { class: 'btn-group' }, zoomBtns)), viewGroup);
     }
+    this.view3dHost = h('div', { class: 'view3d', hidden: true });
     const showPanel = this.opts.panel !== false;
     this.selBar = h('div', { class: 'sel-bar', role: 'group', 'aria-label': 'Selection', hidden: true });
     this.scaleLine = h('p', { class: 'sheet-scale' });
@@ -126,7 +184,7 @@ export class PlanEditor {
       h('div', { class: 'editor-main' },
         toolbar,
         h('p', { class: 'small-screen-hint' }, 'The plan editor works best on a larger screen; drag the empty canvas to pan.'),
-        h('div', { class: 'editor-canvas' }, sheet, h('div', { class: 'canvas-wrap' }, this.svg, this.selBar), this.status)),
+        h('div', { class: 'editor-canvas' }, sheet, (this.canvasWrap = h('div', { class: 'canvas-wrap' }, this.svg, this.selBar)), this.view3dHost, this.status)),
       showPanel ? this.panel : null);
     host.append(this.root);
     this.renderPanel();
@@ -229,6 +287,7 @@ export class PlanEditor {
     this.render();
     this.renderPanel();
     this.updateStatus();
+    this.update3D();
     if (this.opts.onChange) this.opts.onChange(this.getGeometry());
   }
 

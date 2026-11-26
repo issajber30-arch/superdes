@@ -45,6 +45,12 @@ export async function render(el, ctx) {
     },
   });
   saved = JSON.stringify(editor.getGeometry());
+  // Chosen finishes colour the 3D view; loaded after the editor so the 2D plan never waits on them.
+  api(`${base}/finishes`).then((res) => {
+    const map = {};
+    for (const sel of res.selections) (map[sel.room_id] ||= {})[sel.surface] = sel.color;
+    editor.setFinishes(map);
+  }).catch(() => { /* 3D falls back to neutral colours */ });
 
   function showInfo(v) {
     info.replaceChildren(
