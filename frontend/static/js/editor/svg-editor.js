@@ -98,6 +98,8 @@ export class PlanEditor {
       const bar = h('div', { class: 'view3d-bar', role: 'toolbar', 'aria-label': '3D view controls' },
         this.btn('Reset', 'Reset the 3D camera', () => this.v3d && this.v3d.resetView(), 'restart_alt'),
         this.btn('Top', 'View from above', () => this.v3d && this.v3d.topView(), 'map'),
+        this.opts.onRenderView ? this.btn('Render this view', 'Make a concept render from this camera (1 credit)',
+          (e) => this.v3d && this.opts.onRenderView(this.v3d.cameraPose(), this.getGeometry(), e.currentTarget), 'videocam') : null,
         h('span', { class: 'muted small' }, 'Drag to orbit · scroll or pinch to zoom · right-drag to pan. Conceptual, not to construction accuracy.'));
       this.view3dHost.replaceChildren(bar, stage);
       this.v3d = new View3D(stage);

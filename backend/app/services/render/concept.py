@@ -56,7 +56,74 @@ def orient(angle: str, bb):
 class ConceptRenderer:
     name = "concept"
 
+    def render_camera(self, scene: dict) -> bytes:
+        """Pinhole camera at eye height from a 3D-view pose (plan mm, yaw in degrees, 0 = +x, 90 = +y).
+        The camera is kept inside the room; geometry behind it is clipped at a near plane, never mirrored."""
+        x0, y0, x1, y1 = scene["room"]["bbox"]
+        cam, inset = scene["camera"], 150
+        px = min(max(cam["x"], x0 + inset), max(x1 - inset, x0 + inset))
+        pz = min(max(cam["y"], y0 + inset), max(y1 - inset, y0 + inset))
+        yaw = math.radians(cam["yaw"])
+        fx, fz = math.cos(yaw), math.sin(yaw)  # forward on the plan
+        rx, rz = -fz, fx  # viewer's right (plan y points down)
+        focal, cx, cy, near = (W / 2) / math.tan(math.radians(37.5)), W / 2, H * 0.52, 50.0
+        img = Image.new("RGB", (W, H), (235, 232, 226))
+        d = ImageDraw.Draw(img)
+
+        def poly(world, fill, outline):
+            pts = [((X - px) * rx + (Z - pz) * rz, EYE - Y, (X - px) * fx + (Z - pz) * fz) for X, Y, Z in world]
+            clipped = []  # Sutherland-Hodgman against z >= near
+            for i, a in enumerate(pts):
+                b = pts[(i + 1) % len(pts)]
+                if a[2] >= near:
+                    clipped.append(a)
+                if (a[2] >= near) != (b[2] >= near):
+                    t = (near - a[2]) / (b[2] - a[2])
+                    clipped.append(tuple(a[k] + (b[k] - a[k]) * t for k in range(3)))
+            if len(clipped) >= 3:
+                d.polygon([(cx + focal * x / z, cy + focal * y / z) for x, y, z in clipped], fill=fill, outline=outline)
+
+        wall, floor = _hex(scene["wall_color"]), _hex(scene["floor_color"])
+        corners = [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
+        poly([(x, ROOM_H, z) for x, z in corners], _shade(wall, 1.04), _shade(wall, 0.8))  # ceiling
+        poly([(x, 0, z) for x, z in corners], floor, _shade(floor, 0.8))
+        for (ax, az), (bx, bz), f in zip(corners, corners[1:] + corners[:1], (1.0, 0.92, 0.95, 0.88)):
+            poly([(ax, 0, az), (bx, 0, bz), (bx, ROOM_H, bz), (ax, ROOM_H, az)], _shade(wall, f), _shade(wall, 0.8))
+        for o in scene["openings"]:
+            y_lo, y_hi = (900, 2100) if o["kind"] == "window" else (0, 2100)
+            fill = (170, 205, 230) if o["kind"] == "window" else (150, 110, 75)
+            (ax, az), (bx, bz) = o["a"], o["b"]
+            poly([(ax, y_lo, az), (bx, y_lo, bz), (bx, y_hi, bz), (ax, y_hi, az)], fill, (90, 90, 90))
+
+        accent, base = _hex(scene["accent_color"]), _hex(scene["furniture_color"])
+        depth = lambda X, Z: (X - px) * fx + (Z - pz) * fz
+        boxes = []
+        for i, it in enumerate(scene["furniture"]):
+            mx, mz, r = it["x"] + it["w"] / 2, it["y"] + it["d"] / 2, math.radians(it["rot"])
+            foot = [(mx + sx * it["w"] / 2 * math.cos(r) - sz * it["d"] / 2 * math.sin(r),
+                     mz + sx * it["w"] / 2 * math.sin(r) + sz * it["d"] / 2 * math.cos(r)) for sx, sz in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+            boxes.append((depth(mx, mz), i, foot, it["h"], accent if i % 3 == 0 else base))
+        for _, _, foot, h, color in sorted(boxes, key=lambda b: (-b[0], b[1])):  # far to near
+            sides = [(foot[k], foot[(k + 1) % 4]) for k in range(4)]
+            for j, (a, b) in enumerate(sorted(sides, key=lambda s: -depth((s[0][0] + s[1][0]) / 2, (s[0][1] + s[1][1]) / 2))):
+                poly([(a[0], 0, a[1]), (b[0], 0, b[1]), (b[0], h, b[1]), (a[0], h, a[1])], _shade(color, 0.75 + 0.07 * j), _shade(color, 0.55))
+            poly([(x, h, z) for x, z in foot], _shade(color, 1.12), _shade(color, 0.55))
+        return self._finish(img, d, scene, "3D view")
+
+    def _finish(self, img, d, scene: dict, view_label: str) -> bytes:
+        d.rectangle([0, H - 44, W, H], fill=(30, 30, 30))
+        font, uni = _font(18)
+        dash, dot = ("—", "·") if uni else ("-", "|")
+        d.text((16, H - 34), f"Conceptual visualization {dash} plan v{scene['version_no']}", fill=(255, 255, 255), font=font)
+        d.text((W - 16, H - 34), f"{scene['room_label']} {dot} {scene['style_name']} {dot} {view_label}", fill=(200, 200, 200),
+               font=_font(16)[0], anchor="ra")
+        buf = io.BytesIO()
+        img.save(buf, "PNG")
+        return buf.getvalue()
+
     def render(self, scene: dict) -> bytes:
+        if scene.get("camera"):
+            return self.render_camera(scene)
         room = scene["room"]
         to_uv, aw, ad, cam_u = orient(scene["angle"], room["bbox"])
         cam_back = max(aw, ROOM_H) * 1.1
@@ -122,12 +189,4 @@ class ConceptRenderer:
                 d.polygon(pts, fill=_shade(color, 0.75 + 0.07 * j), outline=_shade(color, 0.55))
             d.polygon([P(x, h, v) for x, v in corners], fill=_shade(color, 1.12), outline=_shade(color, 0.55))
 
-        d.rectangle([0, H - 44, W, H], fill=(30, 30, 30))
-        font, uni = _font(18)
-        dash, dot = ("—", "·") if uni else ("-", "|")
-        d.text((16, H - 34), f"Conceptual visualization {dash} plan v{scene['version_no']}", fill=(255, 255, 255), font=font)
-        d.text((W - 16, H - 34), f"{scene['room_label']} {dot} {scene['style_name']} {dot} {scene['angle']}", fill=(200, 200, 200),
-               font=_font(16)[0], anchor="ra")
-        buf = io.BytesIO()
-        img.save(buf, "PNG")
-        return buf.getvalue()
+        return self._finish(img, d, scene, scene["angle"])

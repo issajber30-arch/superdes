@@ -9,7 +9,7 @@ from ..deps import MemberCtx, StaffCtx, get_project
 from ..errors import not_found
 from ..schemas import Strict
 from ..services import audit, plans
-from ..services.dossier import CSP, build_html
+from ..services.dossier import CSP, build_html, view_images
 
 router = APIRouter(tags=["dossiers"])
 
@@ -17,6 +17,7 @@ router = APIRouter(tags=["dossiers"])
 class DossierIn(Strict):
     plan_version_no: Annotated[int, Field(ge=1)] | None = None
     note: Annotated[str, Field(max_length=2000)] = ""
+    views: Annotated[list[Annotated[str, Field(max_length=3_000_000)]], Field(max_length=4)] = []  # 3D snapshots (data URLs)
 
 
 LIST_SQL = ("select d.id, v.version_no as plan_version_no, v.review_status, d.note, d.created_by, d.created_at "
@@ -27,8 +28,9 @@ LIST_SQL = ("select d.id, v.version_no as plan_version_no, v.review_status, d.no
 def submit(project_id: uuid.UUID, body: DossierIn, ctx: StaffCtx):
     p = get_project(ctx, project_id)
     v = plans.get_version(ctx.conn, project_id, body.plan_version_no) if body.plan_version_no else plans.current_version(ctx.conn, project_id)
+    views = view_images(body.views)  # validated + re-encoded before anything is written
     author = ctx.conn.execute("select display_name, email from users where id = %s", (ctx.user_id,)).fetchone()
-    html = build_html(ctx.conn, ctx.studio_id, p, v, body.note, author)
+    html = build_html(ctx.conn, ctx.studio_id, p, v, body.note, author, views)
     row = ctx.conn.execute("insert into design_dossiers (studio_id, project_id, plan_version_id, html, note, created_by) "
                            "values (%s,%s,%s,%s,%s,%s) returning id", (ctx.studio_id, project_id, v["id"], html, body.note, ctx.user_id)).fetchone()
     audit.log(ctx.conn, "dossier.submit", ctx.studio_id, ctx.user_id, "dossier", row["id"], {"plan_version_no": v["version_no"]})

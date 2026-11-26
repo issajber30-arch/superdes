@@ -13,6 +13,26 @@ export function webglAvailable() {
   } catch { return false; }
 }
 
+/** Off-screen snapshots for the dossier: two corner views and a top view, as JPEG data URLs. */
+export function captureViews(model, { width = 1200, height = 750 } = {}) {
+  const host = document.createElement('div');
+  host.style.cssText = `position:fixed;left:-20000px;top:0;width:${width}px;height:${height}px;`;
+  document.body.append(host);
+  const v = new View3D(host);
+  try {
+    v.resize();
+    v.update(model, false);
+    const shots = [];
+    v.resetView(); shots.push(v.snapshot());
+    v.resetView(true); shots.push(v.snapshot());
+    v.topView(); shots.push(v.snapshot());
+    return shots;
+  } finally {
+    v.dispose();
+    host.remove();
+  }
+}
+
 export class View3D {
   /** host: element to fill. */
   constructor(host) {
@@ -119,13 +139,27 @@ export class View3D {
 
   span() { const b = this.model.bounds; return Math.max((b.maxX - b.minX) * M, (b.maxY - b.minY) * M, 3); }
 
-  resetView() {
+  /** Three-quarter view from the south-west corner (or south-east when flip). */
+  resetView(flip = false) {
     if (!this.model) return;
     const c = this.center(); const s = this.span();
     this.controls.target.copy(c);
-    this.camera.position.set(c.x - s * 0.8, s * 1.2, c.z + s * 1.35);
+    this.camera.position.set(c.x + (flip ? 1 : -1) * s * 0.8, s * 1.2, c.z + s * 1.35);
     this.controls.update();
     this.draw();
+  }
+
+  /** Camera on the plan: x/y in mm, yaw in degrees (0 = +x, 90 = +y), plus the orbit target in mm. */
+  cameraPose() {
+    const dir = new THREE.Vector3();
+    this.camera.getWorldDirection(dir);
+    return { x: Math.round(this.camera.position.x / M), y: Math.round(this.camera.position.z / M),
+      yaw: Math.round(Math.atan2(dir.z, dir.x) * 180 / Math.PI), target: { x: this.controls.target.x / M, y: this.controls.target.z / M } };
+  }
+
+  snapshot(type = 'image/jpeg', quality = 0.85) {
+    this.draw();
+    return this.canvas.toDataURL(type, quality);
   }
 
   topView() {

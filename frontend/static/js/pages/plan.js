@@ -6,6 +6,19 @@ import { wizardForm } from '../editor/wizard.js';
 import { loadCatalog } from './guest.js';
 import { go, setLeaveGuard } from '../app.js';
 
+/** Room whose polygon contains point p (plan mm), by ray casting. */
+export function roomAt(rooms, p) {
+  return (rooms || []).find((r) => {
+    let inside = false;
+    const poly = r.polygon;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const [xi, yi] = poly[i]; const [xj, yj] = poly[j];
+      if ((yi > p[1]) !== (yj > p[1]) && p[0] < (xj - xi) * (p[1] - yi) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  });
+}
+
 export function flagList(v) {
   if (!v || !v.review_flags || !v.review_flags.length) return null;
   return h('ul', { class: 'flags' }, v.review_flags.map((f) => h('li', null,
@@ -42,6 +55,18 @@ export async function render(el, ctx) {
     onChange: (g) => {
       dirty = JSON.stringify(g) !== saved;
       saveState.textContent = dirty ? 'Unsaved changes' : savedNote;
+    },
+    onRenderView: (pose, g, btn) => {
+      if (dirty) { toast('Save a version first: renders are made from the saved plan.', 'error'); return; }
+      const room = roomAt(g.rooms, [pose.x, pose.y]) || roomAt(g.rooms, [pose.target.x, pose.target.y]);
+      if (!room) { toast('Point the camera at a room to render it.', 'error'); return; }
+      busy(btn, async () => {
+        try {
+          await api(`${base}/renders`, { method: 'POST', body: { plan_version_no: shown.version_no,
+            view: { room_id: room.id, camera: { x: pose.x, y: pose.y, yaw: pose.yaw } } } });
+          toast(`Render of “${room.name || room.kind}” queued — see the Renders tab.`);
+        } catch (ex) { toast(errorText(ex), 'error'); }
+      });
     },
   });
   saved = JSON.stringify(editor.getGeometry());

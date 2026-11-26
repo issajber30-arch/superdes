@@ -72,6 +72,12 @@
   <ul>{% for a in alternatives %}<li><strong>{{ a.name }}</strong>{% if a.style_key %} ({{ a.style_key }}){% endif %} — plan v{{ a.version_no }}{% if a.description %}: {{ a.description }}{% endif %}</li>{% endfor %}</ul>
   {% endif %}
 
+  {% if views %}
+  <h2>3D views</h2>
+  <div class="renders">
+    {% for src in views %}<figure><img src="{{ src }}" alt="3D view {{ loop.index }}"><figcaption>3D view of plan v{{ version.version_no }} — conceptual, not to construction accuracy</figcaption></figure>{% endfor %}
+  </div>
+  {% endif %}
   {% if renders %}
   <h2>Conceptual visualizations</h2>
   <div class="renders">

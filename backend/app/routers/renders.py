@@ -10,16 +10,25 @@ from ..deps import MemberCtx, get_project
 from ..errors import ApiError, not_found
 from ..schemas import Strict
 from ..services import audit, credits, plans, storage
+from ..services.geometry import BOUND
 
 router = APIRouter(tags=["renders"])
 
 ANGLES = ("front", "back", "left", "right", "corner-ne", "corner-nw", "corner-se", "corner-sw")
 
 
+class Camera(Strict):
+    """A 3D-view camera on the plan: position in plan mm and heading in degrees (0 = +x, 90 = +y / down the plan)."""
+    x: Annotated[float, Field(ge=-BOUND, le=BOUND, allow_inf_nan=False)]
+    y: Annotated[float, Field(ge=-BOUND, le=BOUND, allow_inf_nan=False)]
+    yaw: Annotated[float, Field(ge=-360, le=360, allow_inf_nan=False)]
+
+
 class View(Strict):
     room_id: Annotated[str, Field(min_length=1, max_length=64)] | None = None
     angle: Literal[ANGLES] = "front"
     style: Annotated[str, Field(max_length=40)] | None = None
+    camera: Camera | None = None
 
 
 class RenderRequest(Strict):
@@ -56,6 +65,8 @@ def request_render(project_id: uuid.UUID, body: RenderRequest, ctx: MemberCtx, r
             raise ApiError(429, "render_quota_exceeded", "client render quota for this project reached; ask your designer")
     v = (plans.get_version(conn, project_id, body.plan_version_no) if body.plan_version_no
          else plans.current_version(conn, project_id))
+    if body.view.camera and not body.view.room_id:
+        raise ApiError(422, "validation_error", "view.room_id is required with view.camera")
     if body.view.room_id and not any(r["id"] == body.view.room_id for r in v["geometry"]["rooms"]):
         raise ApiError(422, "validation_error", "view.room_id is not a room in that plan version")
     if body.view.style and not conn.execute("select 1 from styles where key = %s", (body.view.style,)).fetchone():

@@ -6,6 +6,17 @@ import { h, field, notice, busy, money, toast, select, fmtDate } from '../dom.js
 import { icon } from '../icons.js';
 import { polygonArea, CAVEAT } from '../editor/svg-editor.js';
 import { reviewBadge } from './plan.js';
+import { loadCatalog } from './guest.js';
+
+/** 3D snapshots of a plan version with its chosen finishes; null when the browser has no WebGL. */
+async function threeDViews(base, versionNo) {
+  const [{ captureViews, webglAvailable }, { sceneModel }] = await Promise.all([import('../editor/view3d.js'), import('../editor/scene-model.js')]);
+  if (!webglAvailable()) return null;
+  const [v, fin, catalog] = await Promise.all([api(`${base}/plan/versions/${versionNo}`), api(`${base}/finishes`), loadCatalog()]);
+  const finishes = {};
+  for (const sel of fin.selections) (finishes[sel.room_id] ||= {})[sel.surface] = sel.color;
+  return captureViews(sceneModel(v.geometry, { finishes, catalog }));
+}
 
 // estimate categories -> Stitch schedule groups
 const GROUPS = [
@@ -204,10 +215,12 @@ export async function render(el, ctx) {
     const ver = select(versions.versions.map((v) => [v.version_no, `v${v.version_no}${v.label ? ` — ${v.label}` : ''}`]), versions.versions[0].version_no);
     const note = h('textarea', { rows: 2, maxlength: 2000 });
     const derr = notice();
+    const with3d = h('input', { type: 'checkbox', checked: true });
     const btn = h('button', { type: 'submit', class: 'btn btn-primary' }, icon('send', 16), 'Generate and submit dossier');
     dossierForm = h('form', { class: 'stack-sm' }, h('span', { class: 'label-mono flat' }, 'New dossier'),
       h('p', { class: 'muted small flat' }, 'Creates an immutable, branded snapshot: plan, brief, concepts, latest renders, non-binding estimate and review status.'),
-      field('Plan version', ver), field('Note for the client', note), btn, derr);
+      field('Plan version', ver), field('Note for the client', note),
+      h('label', { class: 'row gap-sm' }, with3d, h('span', null, 'Include 3D views (two corners and a top view)')), btn, derr);
     dossierForm.addEventListener('submit', (e) => {
       e.preventDefault();
       derr.clear();
@@ -215,7 +228,13 @@ export async function render(el, ctx) {
       if (note.value.trim()) body.note = note.value.trim();
       busy(btn, async () => {
         try {
+          let skipped3d = false;
+          if (with3d.checked) {
+            try { body.views = await threeDViews(base, Number(ver.value)); } catch { skipped3d = true; }
+            if (!body.views) skipped3d = true;
+          }
           const d = await api(`${base}/dossiers`, { method: 'POST', body });
+          if (skipped3d) toast('The dossier was made without 3D views: this browser cannot show 3D.', 'error');
           note.value = '';
           drawDossiers((await api(`${base}/dossiers`)).dossiers);
           derr.show(`Dossier for v${d.plan_version_no} created.`, 'info');

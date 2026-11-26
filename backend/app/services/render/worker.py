@@ -63,7 +63,8 @@ def build_scene(conn, job: dict) -> dict:
     return {"version_no": v["version_no"], "angle": view.get("angle", "front"), "room": {"bbox": bb},
             "room_label": (room["name"] or room["kind"]) if room else "whole plan", "room_kind": room["kind"] if room else "room",
             "style_name": style["name"], "floor_color": colors["floor"], "wall_color": colors["wall"],
-            "accent_color": pal["accent"], "furniture_color": pal["furniture"], "furniture": furniture, "openings": openings, "seed": seed}
+            "accent_color": pal["accent"], "furniture_color": pal["furniture"], "furniture": furniture, "openings": openings, "seed": seed,
+            "camera": view.get("camera") if room else None}
 
 
 def run_once(renderer=None) -> bool:
