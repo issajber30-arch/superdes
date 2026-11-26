@@ -2,6 +2,7 @@
 // Plan mm (x, y down) -> scene metres (x, z); y is up.
 import * as THREE from '../vendor/three/three.module.min.js';
 import { OrbitControls } from '../vendor/three/OrbitControls.js';
+import { blocksAt, EYE_H } from './scene-model.js';
 
 const M = 0.001;
 const EDGE = 0x2b2a28;
@@ -63,8 +64,117 @@ export class View3D {
     this.ro = new ResizeObserver(() => this.resize());
     this.ro.observe(host);
     this.resize();
-    this.loop = () => { this.raf = requestAnimationFrame(this.loop); if (this.controls.update()) this.draw(); };
+
+    // walk-through state: yaw/pitch in radians (yaw 0 = +x, plan convention), held movement keys
+    this.mode = 'orbit';
+    this.walk = { yaw: 0, pitch: 0, dirty: false };
+    this.held = new Set();
+    this.canvas.tabIndex = 0;
+    const KEYS = { KeyW: 'fwd', ArrowUp: 'fwd', KeyS: 'back', ArrowDown: 'back', KeyA: 'left', KeyD: 'right', ArrowLeft: 'turnl', ArrowRight: 'turnr', KeyQ: 'turnl', KeyE: 'turnr' };
+    this.onKey = (e) => {
+      const k = this.mode === 'walk' && KEYS[e.code];
+      if (!k) return;
+      e.preventDefault();
+      if (e.type === 'keydown') this.held.add(k); else this.held.delete(k);
+    };
+    this.onBlur = () => this.held.clear();
+    // keys work anywhere in the 3D area (canvas or its buttons), not only on the focused canvas
+    this.keyTarget = host.parentElement || host;
+    this.keyTarget.addEventListener('keydown', this.onKey);
+    // releases are heard everywhere: focus can leave the 3D area while a key is down (e.g. a button disables itself)
+    window.addEventListener('keyup', this.onKey);
+    window.addEventListener('blur', this.onBlur);
+    this.canvas.addEventListener('blur', this.onBlur);
+    let drag = null;
+    this.canvas.addEventListener('pointerdown', (e) => {
+      if (this.mode !== 'walk') return;
+      drag = { x: e.clientX, y: e.clientY, id: e.pointerId };
+      this.canvas.setPointerCapture(e.pointerId);
+      this.canvas.focus({ preventScroll: true });
+    });
+    this.canvas.addEventListener('pointermove', (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      this.walk.yaw -= (e.clientX - drag.x) * 0.005;
+      this.walk.pitch = Math.max(-1.2, Math.min(1.2, this.walk.pitch + (e.clientY - drag.y) * 0.004));
+      drag.x = e.clientX; drag.y = e.clientY;
+      this.walk.dirty = true;
+    });
+    const end = () => { drag = null; };
+    this.canvas.addEventListener('pointerup', end);
+    this.canvas.addEventListener('pointercancel', end);
+
+    let last = performance.now();
+    this.loop = () => {
+      this.raf = requestAnimationFrame(this.loop);
+      const now = performance.now(); const dt = Math.min(0.1, (now - last) / 1000); last = now;
+      if (this.mode === 'walk') this.stepWalk(dt);
+      else if (this.controls.update()) this.draw();
+    };
     this.loop();
+  }
+
+  /** 'orbit' (model view) or 'walk' (eye height, cannot pass through walls). */
+  setMode(mode) {
+    if (!this.model || mode === this.mode) return;
+    this.mode = mode;
+    this.held.clear();
+    this.controls.enabled = mode === 'orbit';
+    this.camera.fov = mode === 'walk' ? 70 : 50;
+    this.camera.updateProjectionMatrix();
+    this.canvas.setAttribute('aria-label', mode === 'walk'
+      ? 'Walk-through. Drag to look around; W/S or arrow keys to walk, A/D to step sideways, Q/E or left/right arrows to turn.'
+      : '3D view of the plan. Drag to orbit, scroll or pinch to zoom, right-drag to pan.');
+    if (mode === 'orbit') { this.resetView(); return; }
+    const start = this.walkStart();
+    this.camera.position.set(start[0] * M, EYE_H * M, start[1] * M);
+    this.walk.yaw = start[2];
+    this.walk.pitch = 0;
+    this.walk.dirty = true;
+    this.canvas.focus({ preventScroll: true });
+  }
+
+  /** Start in the room the orbit view looks at (its centre), facing its longer side; [x, y, yaw] in mm/radians. */
+  walkStart() {
+    const t = [this.controls.target.x / M, this.controls.target.z / M];
+    const inside = (poly, p) => {
+      let hit = false;
+      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const [xi, yi] = poly[i]; const [xj, yj] = poly[j];
+        if ((yi > p[1]) !== (yj > p[1]) && p[0] < (xj - xi) * (p[1] - yi) / (yj - yi) + xi) hit = !hit;
+      }
+      return hit;
+    };
+    const floor = this.model.floors.find((f) => f.polygon && inside(f.polygon, t)) || this.model.floors[0];
+    if (!floor) return [t[0], t[1], 0];
+    const xs = floor.polygon.map((p) => p[0]); const ys = floor.polygon.map((p) => p[1]);
+    const w = Math.max(...xs) - Math.min(...xs); const d = Math.max(...ys) - Math.min(...ys);
+    return [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2, w >= d ? 0 : Math.PI / 2];
+  }
+
+  /** Hold-to-move for on-screen buttons: action is fwd | back | left | right | turnl | turnr. */
+  press(action, on) { if (on) this.held.add(action); else this.held.delete(action); }
+
+  stepWalk(dt) {
+    const w = this.walk; const h = this.held;
+    if (h.has('turnl')) { w.yaw -= 1.6 * dt; w.dirty = true; }
+    if (h.has('turnr')) { w.yaw += 1.6 * dt; w.dirty = true; }
+    const f = (h.has('fwd') ? 1 : 0) - (h.has('back') ? 1 : 0);
+    const s = (h.has('right') ? 1 : 0) - (h.has('left') ? 1 : 0);
+    if (f || s) {
+      const step = 1400 * dt; // mm per frame at 1.4 m/s
+      const cx = Math.cos(w.yaw); const cz = Math.sin(w.yaw);
+      const dx = (f * cx - s * cz) * step; const dz = (f * cz + s * cx) * step;
+      const x = this.camera.position.x / M; const z = this.camera.position.z / M;
+      const free = (nx, nz) => !blocksAt(this.model.walls, nx, nz, 250);
+      // slide along walls: try the full step, then each axis alone
+      const [nx, nz] = free(x + dx, z + dz) ? [x + dx, z + dz] : free(x + dx, z) ? [x + dx, z] : free(x, z + dz) ? [x, z + dz] : [x, z];
+      if (nx !== x || nz !== z) { this.camera.position.x = nx * M; this.camera.position.z = nz * M; w.dirty = true; }
+    }
+    if (!w.dirty) return;
+    w.dirty = false;
+    const p = this.camera.position;
+    this.camera.lookAt(p.x + Math.cos(w.yaw) * Math.cos(w.pitch), p.y - Math.sin(w.pitch), p.z + Math.sin(w.yaw) * Math.cos(w.pitch));
+    this.draw();
   }
 
   resize() {
@@ -173,6 +283,9 @@ export class View3D {
 
   dispose() {
     cancelAnimationFrame(this.raf);
+    this.keyTarget.removeEventListener('keydown', this.onKey);
+    window.removeEventListener('keyup', this.onKey);
+    window.removeEventListener('blur', this.onBlur);
     this.ro.disconnect();
     this.controls.dispose();
     this.clear();

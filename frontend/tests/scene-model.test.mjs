@@ -66,3 +66,22 @@ test('bounds cover walls, rooms and items', () => {
   const m = sceneModel({ rooms: [room], furniture: [{ id: 'f', catalog_key: 'k', x: 6000, y: 6000, w: 500, d: 500, rot: 0 }] });
   assert.deepEqual([m.bounds.minX, m.bounds.minY, m.bounds.maxX, m.bounds.maxY], [0, 0, 6500, 6500]);
 });
+
+// ---------- stage 3: walk-through collision ----------
+import { blocksAt, EYE_H } from '../static/js/editor/scene-model.js';
+
+test('walls block, door openings let you through, window sills block', () => {
+  const g = { walls: [wall('w1', [0, 0], [5000, 0])],
+    openings: [{ id: 'd', wall_id: 'w1', offset: 1000, width: 900, kind: 'door' }, { id: 'o', wall_id: 'w1', offset: 3000, width: 1200, kind: 'window' }] };
+  const { walls } = sceneModel(g);
+  assert.equal(blocksAt(walls, 500, 0, 250), true); // solid wall
+  assert.equal(blocksAt(walls, 1450, 0, 250), false); // middle of the door
+  assert.equal(blocksAt(walls, 3600, 0, 250), true); // window: sill blocks
+  assert.equal(blocksAt(walls, 500, 1000, 250), false); // well away from the wall
+  assert.equal(blocksAt(walls, 500, 340, 250), true); // within radius + half thickness
+  assert.ok(EYE_H > 1000 && EYE_H < 2000);
+});
+
+test('empty plan never blocks', () => {
+  assert.equal(blocksAt([], 0, 0, 250), false);
+});

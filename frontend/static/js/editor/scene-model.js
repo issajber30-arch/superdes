@@ -83,3 +83,17 @@ export function sceneModel(geometry, opts = {}) {
   const bounds = xs.length ? { minX: Math.min(...xs), minY: Math.min(...ys), maxX: Math.max(...xs), maxY: Math.max(...ys) } : { minX: 0, minY: 0, maxX: 5000, maxY: 4000 };
   return { bounds, walls: wallOut, floors, items };
 }
+
+// ---------- walk-through ----------
+export const EYE_H = 1600;
+const KNEE_H = 300;
+
+/** True when a walker of radius r (mm) at plan point (x, y) would touch a wall piece that spans walking height:
+ *  full walls and window sills block; the lintel over a door does not. walls: sceneModel(...).walls */
+export function blocksAt(walls, x, y, r) {
+  for (const p of walls) {
+    if (p.z0 >= EYE_H || p.z1 <= KNEE_H) continue;
+    if (segDist([x, y], p.a, p.b) < r + p.thickness / 2) return true;
+  }
+  return false;
+}

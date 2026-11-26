@@ -95,12 +95,42 @@ export class PlanEditor {
       }
       this.sceneModel = sceneModel;
       const stage = h('div', { class: 'view3d-stage' });
+      const hint = h('span', { class: 'muted small' }, 'Drag to orbit · scroll or pinch to zoom · right-drag to pan. Conceptual, not to construction accuracy.');
+      const hold = (label, title, action, ic) => {
+        const b = this.btn(label, title, null, ic);
+        const on = (e) => { e.preventDefault(); this.v3d && this.v3d.press(action, true); };
+        const off = () => this.v3d && this.v3d.press(action, false);
+        b.addEventListener('pointerdown', on);
+        for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, off);
+        return b;
+      };
+      const pad = h('div', { class: 'view3d-pad', role: 'group', 'aria-label': 'Walk controls (hold)', hidden: true },
+        hold(null, 'Turn left', 'turnl', 'undo'), hold('Forward', 'Walk forward', 'fwd', null),
+        hold('Back', 'Walk back', 'back', null), hold(null, 'Turn right', 'turnr', 'redo'));
+      const walkBtn = this.btn('Walk', 'Walk through at eye height', () => {
+        if (!this.v3d) return;
+        const walking = this.v3d.mode !== 'walk';
+        this.v3d.setMode(walking ? 'walk' : 'orbit');
+        walkBtn.setAttribute('aria-pressed', String(walking));
+        pad.hidden = !walking;
+        if (walking) stage.scrollIntoView({ block: 'nearest' }); // the hold buttons sit at the bottom of the view
+        hint.textContent = walking ? 'Drag to look · W/S or ↑/↓ to walk · A/D to step aside · Q/E or ←/→ to turn. Doors are open; walls stop you.'
+          : 'Drag to orbit · scroll or pinch to zoom · right-drag to pan. Conceptual, not to construction accuracy.';
+      }, 'directions_walk');
+      walkBtn.setAttribute('aria-pressed', 'false');
+      const orbitFirst = (fn) => () => {
+        if (!this.v3d) return;
+        if (this.v3d.mode === 'walk') walkBtn.click();
+        fn();
+      };
       const bar = h('div', { class: 'view3d-bar', role: 'toolbar', 'aria-label': '3D view controls' },
-        this.btn('Reset', 'Reset the 3D camera', () => this.v3d && this.v3d.resetView(), 'restart_alt'),
-        this.btn('Top', 'View from above', () => this.v3d && this.v3d.topView(), 'map'),
+        this.btn('Reset', 'Reset the 3D camera', orbitFirst(() => this.v3d.resetView()), 'restart_alt'),
+        this.btn('Top', 'View from above', orbitFirst(() => this.v3d.topView()), 'map'),
+        walkBtn,
         this.opts.onRenderView ? this.btn('Render this view', 'Make a concept render from this camera (1 credit)',
           (e) => this.v3d && this.opts.onRenderView(this.v3d.cameraPose(), this.getGeometry(), e.currentTarget), 'videocam') : null,
-        h('span', { class: 'muted small' }, 'Drag to orbit · scroll or pinch to zoom · right-drag to pan. Conceptual, not to construction accuracy.'));
+        hint);
+      stage.append(pad); // overlaid on the view so it is always reachable
       this.view3dHost.replaceChildren(bar, stage);
       this.v3d = new View3D(stage);
       this.update3D(false);
