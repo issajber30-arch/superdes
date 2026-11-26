@@ -78,6 +78,19 @@ export class PlanEditor {
     if (this.v3d && this.sceneModel) this.v3d.update(this.sceneModel(this.g, this.sceneOpts()), keepView);
   }
 
+  /** Move furniture or a fixture to (x, y) mm through the normal edit path (undo, unsaved state); snaps like a 2D drag. */
+  moveItem(type, id, x, y) {
+    if (this.readOnly || !['furniture', 'fixtures'].includes(type)) return;
+    const it = this.find(type, id);
+    if (!it || !Number.isFinite(x) || !Number.isFinite(y)) return;
+    const nx = it.x + snap(x - it.x); const ny = it.y + snap(y - it.y);
+    if (nx === it.x && ny === it.y) { this.update3D(); return; } // put the 3D box back on its grid position
+    this.pushUndo();
+    it.x = nx; it.y = ny;
+    this.sel = { type, id };
+    this.changed();
+  }
+
   async toggle3D() {
     if (this.v3d || this.loading3d) { this.close3D(); return; }
     this.loading3d = true;
@@ -95,7 +108,7 @@ export class PlanEditor {
       }
       this.sceneModel = sceneModel;
       const stage = h('div', { class: 'view3d-stage' });
-      const hint = h('span', { class: 'muted small' }, 'Drag to orbit · scroll or pinch to zoom · right-drag to pan. Conceptual, not to construction accuracy.');
+      const hint = h('span', { class: 'muted small' }, this.readOnly ? 'Drag to orbit · scroll or pinch to zoom · right-drag to pan. Conceptual, not to construction accuracy.' : 'Drag furniture to move it (undo works) · drag elsewhere to orbit · scroll or pinch to zoom. Conceptual, not to construction accuracy.');
       const hold = (label, title, action, ic) => {
         const b = this.btn(label, title, null, ic);
         const on = (e) => { e.preventDefault(); this.v3d && this.v3d.press(action, true); };
@@ -115,7 +128,7 @@ export class PlanEditor {
         pad.hidden = !walking;
         if (walking) stage.scrollIntoView({ block: 'nearest' }); // the hold buttons sit at the bottom of the view
         hint.textContent = walking ? 'Drag to look · W/S or ↑/↓ to walk · A/D to step aside · Q/E or ←/→ to turn. Doors are open; walls stop you.'
-          : 'Drag to orbit · scroll or pinch to zoom · right-drag to pan. Conceptual, not to construction accuracy.';
+          : this.readOnly ? 'Drag to orbit · scroll or pinch to zoom · right-drag to pan. Conceptual, not to construction accuracy.' : 'Drag furniture to move it (undo works) · drag elsewhere to orbit · scroll or pinch to zoom. Conceptual, not to construction accuracy.';
       }, 'directions_walk');
       walkBtn.setAttribute('aria-pressed', 'false');
       const orbitFirst = (fn) => () => {
@@ -133,6 +146,7 @@ export class PlanEditor {
       stage.append(pad); // overlaid on the view so it is always reachable
       this.view3dHost.replaceChildren(bar, stage);
       this.v3d = new View3D(stage);
+      if (!this.readOnly) this.v3d.onDragItem = (type, id, x, y) => this.moveItem(type, id, x, y);
       this.update3D(false);
     } catch (ex) {
       this.view3dHost.replaceChildren(h('p', { class: 'notice notice-error view3d-msg' }, `The 3D view could not load: ${ex.message}`));

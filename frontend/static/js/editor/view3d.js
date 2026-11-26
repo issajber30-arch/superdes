@@ -103,6 +103,61 @@ export class View3D {
     this.canvas.addEventListener('pointerup', end);
     this.canvas.addEventListener('pointercancel', end);
 
+    // furniture drag (orbit mode): set onDragItem(type, id, x, y) to enable; x/y = new top-left corner in plan mm
+    this.onDragItem = null;
+    this.ray = new THREE.Raycaster();
+    const floor = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const aim = (e) => {
+      const r = this.canvas.getBoundingClientRect();
+      this.ray.setFromCamera(new THREE.Vector2((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1), this.camera);
+    };
+    const hitFloor = (e) => { aim(e); return this.ray.ray.intersectPlane(floor, new THREE.Vector3()); };
+    const pickItem = (e) => {
+      aim(e);
+      const items = this.group.children.filter((o) => o.userData.kind === 'furniture' || o.userData.kind === 'fixtures');
+      const hit = this.ray.intersectObjects(items, false)[0];
+      return hit ? hit.object : null;
+    };
+    let move = null;
+    // capture phase: runs before OrbitControls' own pointerdown on the canvas, so a press on furniture never orbits
+    this.canvas.addEventListener('pointerdown', (e) => {
+      if (this.mode !== 'orbit' || !this.onDragItem || e.button !== 0) return;
+      const obj = pickItem(e); const at = obj && hitFloor(e);
+      if (!obj || !at) return;
+      this.controls.enabled = false;
+      move = { obj, id: e.pointerId, dx: obj.position.x - at.x, dz: obj.position.z - at.z, moved: false };
+      this.canvas.setPointerCapture(e.pointerId);
+    }, { capture: true });
+    this.canvas.addEventListener('pointermove', (e) => {
+      if (!move) {
+        if (this.mode === 'orbit' && this.onDragItem && e.pointerType === 'mouse') this.canvas.style.cursor = pickItem(e) ? 'move' : '';
+        return;
+      }
+      if (e.pointerId !== move.id) return;
+      const at = hitFloor(e);
+      if (!at) return;
+      const b = this.model.bounds; const pad = 2000 * M; // keep it near the plan even at grazing angles
+      move.obj.position.x = Math.min(Math.max(at.x + move.dx, b.minX * M - pad), b.maxX * M + pad);
+      move.obj.position.z = Math.min(Math.max(at.z + move.dz, b.minY * M - pad), b.maxY * M + pad);
+      move.moved = true;
+      this.draw();
+    });
+    this.canvas.addEventListener('pointerup', (e) => {
+      if (!move || e.pointerId !== move.id) return;
+      const { obj, moved } = move;
+      move = null;
+      this.controls.enabled = true;
+      if (!moved) return;
+      const it = this.model.items.find((i) => i.id === obj.userData.id && i.type === obj.userData.kind);
+      if (it) this.onDragItem(it.type, it.id, Math.round(obj.position.x / M - it.w / 2), Math.round(obj.position.z / M - it.d / 2));
+    });
+    this.canvas.addEventListener('pointercancel', (e) => {
+      if (!move || e.pointerId !== move.id) return;
+      move = null;
+      this.controls.enabled = true;
+      this.update(this.model); // put the box back
+    });
+
     let last = performance.now();
     this.loop = () => {
       this.raf = requestAnimationFrame(this.loop);
