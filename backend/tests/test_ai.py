@@ -71,6 +71,9 @@ def test_helper_answers_app_pricing_and_design_from_library():
 
     est = _ask(c, pid, "how much will my design cost")  # no budget set in the brief
     assert "None" not in est["content"] and "$" not in est["content"] and "not set" in est["content"]
+    assert " to " in est["content"] and "not available yet" not in est["content"]  # this project has a sofa
+    empty = _ask(c, create_project(c, {})["id"], "how much will my design cost")
+    assert "not available yet" in empty["content"] and "0 to 0" not in empty["content"]
 
     design = _ask(c, pid, "what flooring is good for a dog")
     assert "Source: Design guide" in design["content"]

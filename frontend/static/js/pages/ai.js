@@ -47,7 +47,7 @@ export async function renderConsultant(el, ctx, data) {
       m.suggestions && m.suggestions.length ? h('div', { class: 'suggestions' }, m.suggestions.map(suggestionCard)) : null));
 
   async function loadConversation() {
-    if (!conversationId) { log.replaceChildren(h('p', { class: 'muted small' }, 'Ask about styles, materials, furniture or layout ideas for this project. The consultant uses your brief and current plan.')); return; }
+    if (!conversationId) { log.replaceChildren(h('p', { class: 'muted small' }, 'Ask how to use the app, about pricing, or for design ideas for this project. Design advice uses your brief and current plan.')); return; }
     const res = await api(`${base}/ai/conversations/${conversationId}/messages`);
     log.replaceChildren(...res.messages.map(msgEl));
     log.scrollTop = log.scrollHeight;
@@ -57,7 +57,7 @@ export async function renderConsultant(el, ctx, data) {
   convSel.setAttribute('aria-label', 'Conversation');
   convSel.addEventListener('change', () => { conversationId = convSel.value || null; loadConversation().catch((ex) => err.show(errorText(ex))); });
 
-  const input = h('textarea', { rows: 1, maxlength: 4000, required: true, 'aria-label': 'Your question', placeholder: 'Ask the consultant about styles, materials or furniture…' });
+  const input = h('textarea', { rows: 1, maxlength: 4000, required: true, 'aria-label': 'Your question', placeholder: 'Ask about the app, pricing or design…' });
   const send = h('button', { type: 'submit', class: 'send-btn', title: 'Send', 'aria-label': 'Send' }, icon('send', 18));
   const form = h('form', { class: 'ask-bar' }, input, send);
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey || !e.shiftKey)) { e.preventDefault(); form.requestSubmit(); } });

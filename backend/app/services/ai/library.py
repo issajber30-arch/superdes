@@ -40,6 +40,18 @@ def match(message: str, limit: int = 3) -> list[dict]:
     return [a for _, a in scored[:limit]]
 
 
+def values(ctx: dict) -> dict:
+    """Template values from the consultant context; empty when the context has no estimate."""
+    if "estimate_totals" not in ctx:
+        return {}
+    est, cur = ctx["estimate_totals"], ctx["currency"]
+    bmax = ((ctx.get("brief") or {}).get("budget") or {}).get("max")
+    rng = (f"{est['low']:.0f} to {est['high']:.0f} {cur}" if est["high"] else
+           "not available yet - add furniture and finishes to see a range")
+    return {"estimate_low": f"{est['low']:.0f}", "estimate_high": f"{est['high']:.0f}", "currency": cur, "estimate_range": rng,
+            "budget_max": f"{bmax:.0f} {cur}" if bmax is not None else "not set"}
+
+
 def render(article: dict, values: dict) -> str:
     # Only the article text is a template; user text never is.
     body = Template(article["answer"]).safe_substitute(values)

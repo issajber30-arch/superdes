@@ -1,7 +1,7 @@
 """Deterministic, brief-aware fallback consultant (no model needed)."""
 import re
 
-from .library import match, render
+from .library import match, render, values
 
 
 def _norm(s: str) -> str:
@@ -14,10 +14,7 @@ class RuleBasedConsultant:
     def advise(self, ctx: dict, user_message: str) -> dict:
         hits = match(user_message)
         if hits and hits[0]["topic"] in ("app", "pricing"):
-            est, bmax = ctx["estimate_totals"], ctx["brief"]["budget"].get("max")
-            values = {"estimate_low": f"{est['low']:.0f}", "estimate_high": f"{est['high']:.0f}", "currency": ctx["currency"],
-                      "budget_max": f"{bmax:.0f} {ctx['currency']}" if bmax is not None else "not set"}
-            return {"message": render(hits[0], values), "suggestions": []}
+            return {"message": render(hits[0], values(ctx)), "suggestions": []}
         tip = next((h for h in hits if h["topic"] == "design"), None)
 
         cat = ctx["catalog"]
